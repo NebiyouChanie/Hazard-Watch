@@ -1,174 +1,116 @@
-'use client'
-import { useState, useEffect, useCallback } from 'react';
-import { fetchHazardData } from '@/lib/api';
+import { useState, useCallback } from 'react';
+import { fetchHazardData } from '../lib/api'; // Import your existing API caller
 
 export function useHazardData() {
-  const [regions, setRegions] = useState(null);
   const [activeLayers, setActiveLayers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [mapBounds, setMapBounds] = useState(null);
+  const [selectedRegion, setSelectedRegion] = useState(null);
+  const [regions, setRegions] = useState([]);
 
-  // Memoized loadRegions function to prevent unnecessary recreations
-  const loadRegions = useCallback(async () => {
-    if (loading) return;
+  // Format date as YYYY-MM-DD
+  const formatDate = useCallback((date) => {
+    if (!date) return null;
     
+    if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return date;
+    }
+    
+    const dateObj = new Date(date);
+    if (isNaN(dateObj.getTime())) {
+      throw new Error('Invalid date');
+    }
+    
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+  }, []);
+
+  // Load regions on initialization
+  const loadRegions = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      setError(null);
-      console.log('Fetching regions data...');
-      
-      const response = await fetchHazardData.getRegions();
-      console.log('Regions data received:', response);
-      
-      // Only update if data has actually changed
-      setRegions(prev => {
-        const newRegions = {
-          type: "FeatureCollection",
-          features: response.features || response  
-        };
-        
-        if (JSON.stringify(prev) === JSON.stringify(newRegions)) {
-          return prev;
-        }
-        return newRegions;
-      });
+      const regionsData = await fetchHazardData.getRegions();
+      setRegions(regionsData);
+      return regionsData;
     } catch (err) {
-      console.error('Error loading regions:', err);
-      setError(err.message);
+      setError(`Failed to load regions: ${err.message}`);
+      throw err;
     } finally {
       setLoading(false);
     }
-  }, [loading]);
+  }, []);
+
+
+  
 
   const loadRainfall = useCallback(async (date) => {
-    if (loading) return;
+    setLoading(true);
+    setError(null);
     
     try {
-      setLoading(true);
-      setError(null);
-      
-      // Clear existing rainfall layers
-      setActiveLayers(prev => prev.filter(layer => layer.type !== 'rainfall'));
-      
-      console.log(`Fetching rainfall data for ${date}...`);
-      const response = await fetchHazardData.getRainfall(date);
-      
-      if (!response.data || !Array.isArray(response.data)) {
-        throw new Error('Invalid data format received from API');
+      const formattedDate = formatDate(date);
+      console.log("🚀 ~ loadRainfall ~ formattedDate:", formattedDate)
+      if (!formattedDate) {
+        throw new Error('Invalid date parameter');
       }
 
-      const gridLayer = createRainfallGridLayer(response.data, response.bounds);
+      const response = await fetchHazardData.getRainfall(formattedDate);
+      console.log("🚀 ~ loadRainfall ~ response:", response)
       
-      if (!gridLayer || !gridLayer.features?.length) {
-        throw new Error('Created grid layer contains no features');
-      }
-
-      setActiveLayers(prev => [...prev, {
-        id: `rainfall-${date}`,
-        type: 'rainfall',
-        date,
-        data: gridLayer,
+      const newLayer = {
+        id: `rainfall-${formattedDate}-${Date.now()}`,
+        type: 'Rainfall',
+        date: formattedDate,
+        period: 'daily',
         visible: true,
+        data: response.data,
         bounds: response.bounds,
         stats: response.stats
-      }]);
+      };
 
-      setMapBounds(response.bounds);
+      setActiveLayers(prev => [...prev, newLayer]);
+      return response;
     } catch (err) {
-      console.error('[ERROR] Rainfall load error:', err);
       setError(err.message);
+      console.error('[ERROR] Failed to load rainfall data:', err);
+      throw err;
     } finally {
       setLoading(false);
     }
-  }, [loading]);
+  }, [formatDate]);
 
-  const createRainfallGridLayer = (data, bounds) => {
-    try {
-      if (!data || !bounds) {
-        throw new Error('Missing data or bounds');
-      }
-
-      const [minLat, minLon] = bounds[0];
-      const [maxLat, maxLon] = bounds[1];
-      
-      const rows = data.length;
-      const cols = data[0]?.length || 0;
-      
-      const cellHeight = (maxLat - minLat) / rows;
-      const cellWidth = (maxLon - minLon) / cols;
-
-      const allValues = data.flat().filter(val => val !== null);
-      let minValue = allValues.length ? Math.min(...allValues) : 0;
-      let maxValue = allValues.length ? Math.max(...allValues) : 1;
-
-      if (minValue === maxValue) {
-        maxValue = minValue + 1;
-      }
-
-      const features = [];
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          const val = data[r][c];
-          if (val === null || val === undefined) continue;
-
-          features.push({
-            type: "Feature",
-            properties: {
-              value: val,
-              normalizedValue: (val - minValue) / (maxValue - minValue),
-              minValue,
-              maxValue
-            },
-            geometry: {
-              type: "Polygon",
-              coordinates: [[
-                [minLon + c * cellWidth, minLat + r * cellHeight],
-                [minLon + c * cellWidth, minLat + (r + 1) * cellHeight],
-                [minLon + (c + 1) * cellWidth, minLat + (r + 1) * cellHeight],
-                [minLon + (c + 1) * cellWidth, minLat + r * cellHeight],
-                [minLon + c * cellWidth, minLat + r * cellHeight]
-              ]]
-            }
-          });
-        }
-      }
-
-      return {
-        type: "FeatureCollection",
-        features,
-        bounds,
-        minValue,
-        maxValue
-      };
-    } catch (error) {
-      console.error('[ERROR] Grid creation failed:', error);
-      return null;
-    }
-  };
-
-  const toggleLayerVisibility = (layerId) => {
-    setActiveLayers(prev => 
-      prev.map(layer => 
-        layer.id === layerId ? { ...layer, visible: !layer.visible } : layer
+  const toggleLayerVisibility = useCallback((layerId) => {
+    setActiveLayers(prev =>
+      prev.map(layer =>
+        layer.id === layerId
+          ? { ...layer, visible: !layer.visible }
+          : layer
       )
     );
-  };
+  }, []);
 
-  const removeLayer = (layerId) => {
+  const removeLayer = useCallback((layerId) => {
     setActiveLayers(prev => prev.filter(layer => layer.id !== layerId));
-  };
+  }, []);
+
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
 
   return {
-    regions,
-    activeLayers,
-    loading,
-    error,
-    mapBounds,
-    loadRegions,
     loadRainfall,
+    loadRegions,
+    activeLayers,
     toggleLayerVisibility,
     removeLayer,
-    setMapBounds
+    loading,
+    error,
+    clearError,
+    regions,
+    selectedRegion,
+    setSelectedRegion
   };
 }
