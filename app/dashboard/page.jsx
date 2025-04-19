@@ -15,7 +15,8 @@ export default function Dashboard() {
     <div style={{
       position: 'relative',
       width: '100vw',
-      height: '100vh'
+      height: '700px',
+      overflowX: 'hidden' 
     }}>
       <MinimalMap />
     </div>

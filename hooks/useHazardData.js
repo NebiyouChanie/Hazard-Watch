@@ -7,6 +7,8 @@ export function useHazardData() {
   const [error, setError] = useState(null);
   const [regions, setRegions] = useState(null);
   const [mapBounds, setMapBounds] = useState(null);
+  const [stats, setStats] = useState(null);
+  console.log("🚀 ~ useHazardData ~ stats:", stats)
 
   const formatDate = useCallback((date) => {
     if (!date) return null;
@@ -118,6 +120,7 @@ export function useHazardData() {
     try {
       const formattedDate = formatDate(date);
       const response = await fetchHazardData.getRainfall(formattedDate);
+      setStats(response.stats);
       const heatmapData = convertGridToLatLng(response);
       setRainfallData(heatmapData);
     } catch (err) {
@@ -132,11 +135,11 @@ export function useHazardData() {
     setError(null);
   }, []);
 
-    console.log("🚀 ~ useHazardData ~ rainfallData:", rainfallData)
-  return {
+   return {
     regions,
     rainfallData,
     loading,
+    stats,
     error,
     mapBounds,
     loadRegions,
