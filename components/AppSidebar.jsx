@@ -5,7 +5,7 @@ import {
   Settings, AlertTriangle, BarChart2, Layers
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useHazardData } from '../hooks/useHazardData';
+import { useHazardDataContext } from '@/context/HazardDataContext';
 import { useRouter } from 'next/navigation';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -53,14 +53,19 @@ const analysisItems = [
 ]
 
 export function AppSidebar() {
-  const { loadRainfall, activeLayers, toggleLayerVisibility, removeLayer } = useHazardData()
+  const { loadRainfall, loadRegions } = useHazardDataContext();
   const router = useRouter();
   const [openCalendarFor, setOpenCalendarFor] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [calendarPosition, setCalendarPosition] = useState({ top: 0, left: 0 });
   const buttonRefs = useRef({});
 
-  const handleHazardClick = (hazardType, periodValue, event) => {
+  // Load regions when component mounts
+  useEffect(() => {
+    loadRegions();
+  }, [loadRegions]);
+
+  const handleHazardClick = async (hazardType, periodValue, event) => {
     if (periodValue === 'daily') {
       const buttonRect = event.currentTarget.getBoundingClientRect();
       setCalendarPosition({
@@ -68,8 +73,13 @@ export function AppSidebar() {
         left: buttonRect.right + window.scrollX + 10
       });
       setOpenCalendarFor(openCalendarFor === hazardType ? null : hazardType);
-    } else if (periodValue) {
-      loadRainfall(hazardType.toLowerCase(), periodValue);
+    } else {
+      // For non-daily periods, we can pass null or handle differently
+      try {
+        await loadRainfall(null, periodValue); // Modified to accept period type
+      } catch (error) {
+        console.error('Error loading hazard data:', error);
+      }
     }
   };
 
@@ -77,22 +87,20 @@ export function AppSidebar() {
     if (!date) return;
     setSelectedDate(date);
     if (openCalendarFor) {
-
       try {
-        await loadRainfall(date);
+        await loadRainfall(date, 'daily'); // Explicitly specify 'daily' period
       } catch (error) {
-        console.error('API Error:', error);
-       }
+        console.error('Error loading daily data:', error);
+      }
       setOpenCalendarFor(null);
     }
   };
 
-
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (openCalendarFor && 
-          !event.target.closest('.calendar-container') && 
-          !Object.values(buttonRefs.current).some(ref => ref && ref.contains(event.target))) {
+      if (openCalendarFor &&
+        !event.target.closest('.calendar-container') &&
+        !Object.values(buttonRefs.current).some(ref => ref && ref.contains(event.target))) {
         setOpenCalendarFor(null);
       }
     };
@@ -158,7 +166,7 @@ export function AppSidebar() {
                           <div key={subItem.title} className="relative">
                             <button
                               ref={el => buttonRefs.current[`${item.title}-${subItem.value}`] = el}
-                              onClick={(e) => handleHazardClick(item.title, subItem.value, e)}
+                              onClick={(e) => handleHazardClick(item.title.toLowerCase(), subItem.value, e)}
                               className={cn(
                                 "block w-full text-left rounded-md px-3 py-1.5 text-sm font-medium transition-all",
                                 "text-gray-600 hover:bg-blue-100 hover:text-blue-800"
@@ -178,36 +186,24 @@ export function AppSidebar() {
 
           <SidebarGroup className="mt-6">
             <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-              Active Layers
+              Analysis
             </SidebarGroupLabel>
             <SidebarGroupContent className="mt-2">
-              {activeLayers.length === 0 ? (
-                <p className="px-3 py-2 text-sm text-gray-500">No active layers</p>
-              ) : (
-                <div className="space-y-1">
-                  {activeLayers.map(layer => (
-                    <div key={layer.id} className="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-blue-50">
-                      <span className="text-sm font-medium">
-                        {layer.type} - {layer.periodValue || layer.date}
-                      </span>
-                      <div className="flex gap-1">
-                        <button
-                          onClick={() => toggleLayerVisibility(layer.id)}
-                          className="p-1 text-gray-500 hover:text-blue-600"
-                        >
-                          {layer.visible ? '👁️' : '👁️‍🗨️'}
-                        </button>
-                        <button
-                          onClick={() => removeLayer(layer.id)}
-                          className="p-1 text-gray-500 hover:text-red-600"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <SidebarMenu>
+                {analysisItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild className={cn(
+                      "group flex items-center rounded-lg px-3 py-2 text-gray-700 transition-all",
+                      "hover:bg-blue-50 hover:text-blue-700"
+                    )}>
+                      <a href={item.url}>
+                        <item.icon className="h-5 w-5 flex-shrink-0" />
+                        <span className="ml-3">{item.title}</span>
+                      </a>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
 
@@ -230,8 +226,8 @@ export function AppSidebar() {
       </Sidebar>
 
       {openCalendarFor && (
-        <div 
-          className="calendar-container absolute z-50 bg-white p-2 rounded-md shadow-lg border"
+        <div
+          className="calendar-container absolute z-1000 bg-white p-2 rounded-md shadow-lg border"
           style={{
             top: `${calendarPosition.top}px`,
             left: `${calendarPosition.left}px`

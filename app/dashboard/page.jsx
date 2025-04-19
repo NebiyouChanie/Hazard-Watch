@@ -1,7 +1,7 @@
 'use client'
 import dynamic from 'next/dynamic'
 
-const OpenLayersMap = dynamic(() => import('@/components/OpenLayersMap'), {
+const MinimalMap = dynamic(() => import('@/components/MinimalMap'), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full flex items-center justify-center">
@@ -12,12 +12,12 @@ const OpenLayersMap = dynamic(() => import('@/components/OpenLayersMap'), {
 
 export default function Dashboard() {
   return (
-    <div style={{ 
+    <div style={{
       position: 'relative',
       width: '100vw',
       height: '100vh'
     }}>
-      <OpenLayersMap />
+      <MinimalMap />
     </div>
   )
 }
