@@ -17,7 +17,7 @@ function getColorForIntensity(normalizedIntensity) {
   return '#e6f2ff';
 }
 
-function GridLayer({ rainfallData, cellSize = 1.8 }) {
+function GridLayer({ rainfallData, cellSize = 0.4 }) {
   const map = useMap();
   const gridLayerRef = useRef(null);
   const [renderedCells, setRenderedCells] = useState([]);
@@ -91,7 +91,7 @@ function GridLayer({ rainfallData, cellSize = 1.8 }) {
 
 const MinimalMap = () => {
   const {
-    rainfallData,
+    hazardData: rainfallData, // Renamed to rainfallData to match the GridLayer prop
     stats,
     loading,
     error,
@@ -119,12 +119,13 @@ const MinimalMap = () => {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        {rainfallData && rainfallData.length > 0 && (
+        {rainfallData && Array.isArray(rainfallData) && rainfallData.length > 0 && (
           <GridLayer
             rainfallData={rainfallData}
             cellSize={0.4}
           />
         )}
+        {/* Conditionally render other visualization layers based on hazard type */}
       </MapContainer>
 
       {stats && <RainfallStatsCard stats={stats} />}
