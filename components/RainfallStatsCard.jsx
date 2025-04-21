@@ -1,59 +1,40 @@
 // components/RainfallStatsCard.jsx
 import React from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'; // Assuming you are using Shadcn UI or a similar library
 
 const RainfallStatsCard = ({ stats }) => {
-  if (!stats) {
-    return null;
-  }
+    console.log("🚀 ~ RainfallStatsCard ~ stats:", stats);
+    if (!stats || Object.keys(stats).length === 0) {
+        return (
+            <Card className="absolute bottom-4 left-4 z-2000 w-64 border border-gray-200 bg-white shadow-md rounded-lg p-4">
+                <CardHeader>
+                    <CardTitle className="text-lg font-semibold">Rainfall Data</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm text-gray-600">
+                    No rainfall data available for the selected region and day.
+                </CardContent>
+            </Card>
+        );
+    }
 
-  const getColorForValue = (value, min, max) => {
-    if (max === min) return '#e0f7fa'; // Light cyan for no variation
+    const years = Object.keys(stats).sort();
 
-    const normalizedValue = (value - min) / (max - min);
-    if (normalizedValue > 0.9) return '#1a237e';   // Deep indigo
-    if (normalizedValue > 0.7) return '#283593';
-    if (normalizedValue > 0.5) return '#3f51b5';   // Primary indigo
-    if (normalizedValue > 0.3) return '#5c6bc0';
-    if (normalizedValue > 0.1) return '#7986cb';
-    return '#e0f7fa';                             // Light cyan for low values
-  };
-
-  const formatValue = (value) => {
-    return typeof value === 'number' ? value.toFixed(2) : value;
-  };
-
-  const minColor = getColorForValue(stats.min, stats.min, stats.max);
-  const maxColor = getColorForValue(stats.max, stats.min, stats.max);
-  const meanColor = getColorForValue(stats.mean, stats.min, stats.max);
-  const medianColor = getColorForValue(stats.median, stats.min, stats.max);
-
-  return (
-    <div className="bg-white p-5 rounded-lg shadow-md absolute bottom-4 left-4 z-2000 w-64 border border-gray-200">
-      <h3 className="text-xl font-semibold text-indigo-700 mb-3">Rainfall Insights</h3>
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-gray-700">Minimum:</span>
-          <span className="text-indigo-900" style={{ color: minColor }}>{formatValue(stats.min)}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-gray-700">Maximum:</span>
-          <span className="text-indigo-900" style={{ color: maxColor }}>{formatValue(stats.max)}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-gray-700">Average:</span>
-          <span className="text-indigo-900" style={{ color: meanColor }}>{formatValue(stats.mean)}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-gray-700">Median:</span>
-          <span className="text-indigo-900" style={{ color: medianColor }}>{formatValue(stats.median)}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-gray-700">Total:</span>
-          <span className="text-indigo-900">{formatValue(stats.sum)}</span>
-        </div>
-      </div>
-    </div>
-  );
+    return (
+        <Card className="absolute bottom-4 left-4 z-2000 w-64 border border-gray-200 bg-white shadow-md rounded-lg p-4">
+            <CardHeader>
+                <CardTitle className="text-lg font-semibold">Rainfall ({years[0]}-{years[years.length - 1]})</CardTitle>
+                {/* Optionally display the selected date */}
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+                {years.map(year => (
+                    <p key={year} className="flex items-center justify-between">
+                        <span className="font-medium text-gray-700">{year}:</span>
+                        <span className="text-indigo-900">{typeof stats[year] === 'number' ? stats[year].toFixed(2) : stats[year]}</span>
+                    </p>
+                ))}
+            </CardContent>
+        </Card>
+    );
 };
 
 export default RainfallStatsCard;

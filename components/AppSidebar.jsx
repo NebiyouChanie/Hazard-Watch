@@ -6,6 +6,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useHazardDataContext } from '@/context/HazardDataContext';
+import { useTimeSeriesDataContext } from '@/context/TimeSeriesDataContext'; // Import TimeSeries Context
 import { useRouter } from 'next/navigation';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -30,6 +31,7 @@ const analysisItems = [
 
 export function AppSidebar() {
     const { loadHazardData, loadRegions } = useHazardDataContext();
+    const { fetchTimeSeries } = useTimeSeriesDataContext(); // Get fetchTimeSeries
     const router = useRouter();
     const [openCalendarFor, setOpenCalendarFor] = useState(null);
     const [selectedDate, setSelectedDate] = useState(new Date());
@@ -69,11 +71,20 @@ export function AppSidebar() {
             console.log('Calling loadHazardData with date:', date, period, slug);
             try {
                 await loadHazardData(date, period, slug);
+                // Fetch time series data when a date is selected
+                fetchTimeSeries('daily', null, formatDateForTimeSeries(date));
             } catch (error) {
                 console.error(`Error loading ${period} data for ${slug}:`, error);
             }
             setOpenCalendarFor(null);
         }
+    };
+
+    const formatDateForTimeSeries = (date) => {
+        if (!date) return null;
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${month}-${day}`; // Format to MM-DD to fetch data across years
     };
 
     useEffect(() => {

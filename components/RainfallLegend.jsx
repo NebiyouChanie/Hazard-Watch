@@ -3,7 +3,7 @@ import React from 'react';
 
 const RainfallLegend = () => {
   return (
-    <div className="bg-white p-4 rounded shadow-md absolute bottom-4 right-[18vw] z-2000 w-48">
+    <div className="bg-white p-4 rounded shadow-md absolute bottom-4 right-12 z-2000 w-48">
       <h3 className="text-sm font-semibold text-gray-700 mb-2">Rainfall Intensity</h3>
       <div className="space-y-1">
         <div className="flex items-center">
