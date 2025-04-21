@@ -15,9 +15,11 @@ export function useHazardData() {
     let year = date.getFullYear();
     let month = String(date.getMonth() + 1).padStart(2, '0');
     let day = String(date.getDate()).padStart(2, '0');
-
+  
     if (period === 'monthly') {
       return `${year}-${month}`;
+    } else if (period === 'annual') {
+      return `${year}`;
     } else {
       return `${year}-${month}-${day}`;
     }
