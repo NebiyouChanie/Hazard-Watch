@@ -62,29 +62,27 @@ export function AppSidebar() {
         }
     };
 
+    const formatDateForTimeSeries = (date) => {
+        if (!date) return null;
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${month}-${day}`; // Format to MM-DD
+    };
+    
     const handleDateChange = async (date) => {
         if (!date) return;
-        console.log('Selected Date:', date);
         setSelectedDate(date);
         if (openCalendarFor) {
             const [slug, period] = openCalendarFor.split('-');
-            console.log('Calling loadHazardData with date:', date, period, slug);
             try {
                 await loadHazardData(date, period, slug);
-                // Fetch time series data when a date is selected
-                fetchTimeSeries('daily', null, formatDateForTimeSeries(date));
+                // Ensure you are calling the correct endpoint: 'daily_by_day'
+                fetchTimeSeries('daily_by_day', null, formatDateForTimeSeries(date));
             } catch (error) {
                 console.error(`Error loading ${period} data for ${slug}:`, error);
             }
             setOpenCalendarFor(null);
         }
-    };
-
-    const formatDateForTimeSeries = (date) => {
-        if (!date) return null;
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${month}-${day}`; // Format to MM-DD to fetch data across years
     };
 
     useEffect(() => {

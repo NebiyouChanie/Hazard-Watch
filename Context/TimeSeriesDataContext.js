@@ -13,37 +13,40 @@ export const TimeSeriesDataContext = createContext({
 
 export const TimeSeriesDataProvider = ({ children }) => {
     const [timeSeriesData, setTimeSeriesData] = useState(null);
-    console.log("🚀 ~ TimeSeriesDataProvider ~ timeSeriesData:", timeSeriesData)
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    const fetchTimeSeries = useCallback(async (aggregation = 'daily', region = null, date = null) => {
-        setLoading(true);
-        setError(null);
-        let url = `${API_TIMESERIES_URL}`;
+    // context/TimeSeriesDataContext.js
+const fetchTimeSeries = useCallback(async (aggregation = 'daily', region = null, date = null) => {
+    setLoading(true);
+    setError(null);
+    let url = `${API_TIMESERIES_URL}`;
 
-        if (aggregation === 'daily' && region && date) {
-            url += `/daily_by_day?region=${encodeURIComponent(region)}&date=${date}`;
-        } else {
-            url += `?aggregation=${aggregation}`;
-            if (region) {
-                url += `&region=${encodeURIComponent(region)}`;
-            }
+    if (aggregation === 'daily_by_day' && date) { // Ensure 'date' is present for this endpoint
+        url += `/daily_by_day?date=${date}`;
+        if (region) {
+            url += `&region=${encodeURIComponent(region)}`;
         }
+    } else {
+        url += `?aggregation=${aggregation}`;
+        if (region) {
+            url += `&region=${encodeURIComponent(region)}`;
+        }
+    }
 
-        try {
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const data = await response.json();
-            setTimeSeriesData(data);
-        } catch (err) {
-            setError(err.message);
-            setTimeSeriesData(null);
-        } finally {
-            setLoading(false);
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
+        const data = await response.json();
+        setTimeSeriesData(data);
+    } catch (err) {
+        setError(err.message);
+        setTimeSeriesData(null);
+    } finally {
+        setLoading(false);
+    }
     }, []);
 
     return (
