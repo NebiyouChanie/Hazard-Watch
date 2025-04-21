@@ -76,8 +76,15 @@ export function AppSidebar() {
             const [slug, period] = openCalendarFor.split('-');
             try {
                 await loadHazardData(date, period, slug);
-                // Ensure you are calling the correct endpoint: 'daily_by_day'
-                fetchTimeSeries('daily_by_day', null, formatDateForTimeSeries(date));
+                let timeSeriesAggregation = '';
+                if (period === 'daily') {
+                    timeSeriesAggregation = 'daily_by_day';
+                } else if (period === 'monthly') {
+                    timeSeriesAggregation = 'monthly';
+                }
+                if (timeSeriesAggregation) {
+                    fetchTimeSeries(timeSeriesAggregation, period, formatDateForTimeSeries(date, timeSeriesAggregation)); // Pass 'period' here
+                }
             } catch (error) {
                 console.error(`Error loading ${period} data for ${slug}:`, error);
             }

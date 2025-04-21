@@ -96,7 +96,7 @@ const MinimalMap = () => {
         loading: hazardLoading,
         error: hazardError,
     } = useHazardDataContext();
-    const { timeSeriesData, loading: timeseriesLoading, error: timeseriesError } = useTimeSeriesDataContext();
+    const { timeSeriesData, loading: timeseriesLoading, error: timeseriesError, currentPeriod } = useTimeSeriesDataContext();
 
     if (hazardLoading || timeseriesLoading) {
         return <div className="flex items-center justify-center h-full">Loading data...</div>;
@@ -131,7 +131,7 @@ const MinimalMap = () => {
                 {rainfallData && Array.isArray(rainfallData) && rainfallData.length > 0 && <RainfallLegend />}
             </MapContainer>
 
-            {timeSeriesData && <RainfallStatsCard stats={timeSeriesData} />}
+            {timeSeriesData && <RainfallStatsCard stats={timeSeriesData} period={currentPeriod} />}
         </div>
     );
 };
