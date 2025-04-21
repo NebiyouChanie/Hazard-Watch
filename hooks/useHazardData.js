@@ -1,3 +1,4 @@
+// hooks/useHazardData.js
 import { useState, useCallback, useEffect } from 'react';
 import { fetchHazardData } from '../lib/api';
 
@@ -9,33 +10,20 @@ export function useHazardData() {
   const [mapBounds, setMapBounds] = useState(null);
   const [stats, setStats] = useState(null);
 
-  const formatDate = useCallback((date) => {
+  const formatDate = useCallback((date, period) => {
     if (!date) return null;
-    if (typeof date === 'string') {
-      if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        return date;
-      }
-      const parsedDate = new Date(date);
-      if (!isNaN(parsedDate.getTime())) {
-        date = parsedDate;
-      } else {
-        throw new Error('Invalid date string format');
-      }
-    }
-    if (date instanceof Date) {
-      if (isNaN(date.getTime())) {
-        throw new Error('Invalid Date object');
-      }
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
+    let year = date.getFullYear();
+    let month = String(date.getMonth() + 1).padStart(2, '0');
+    let day = String(date.getDate()).padStart(2, '0');
+
+    if (period === 'monthly') {
+      return `${year}-${month}`;
+    } else {
       return `${year}-${month}-${day}`;
     }
-    throw new Error('Unsupported date format');
   }, []);
 
   const convertGridToLatLng = useCallback((gridData) => {
-    console.log("🚀 ~ convertGridToLatLng ~ gridData:", gridData)
     if (!gridData || !gridData.data || !gridData.bounds) {
       console.error('Invalid grid data format:', gridData);
       return null;
@@ -94,9 +82,14 @@ export function useHazardData() {
   const loadHazardData = useCallback(async (date, period, hazardType) => {
     setLoading(true);
     setError(null);
-     try {
-      const formattedDate = formatDate(date);
-       let response;
+    console.log('Date received in loadHazardData:', date, 'Period:', period, 'Hazard:', hazardType);
+    try {
+      let formattedDate = null;
+      if (date) {
+        formattedDate = formatDate(date, period);  
+      }
+
+      let response;
       switch (hazardType) {
         case 'rainfall':
           response = await fetchHazardData.getRainfall(formattedDate, period);
@@ -108,9 +101,7 @@ export function useHazardData() {
           throw new Error(`Unsupported hazard type: ${hazardType}`);
       }
       setStats(response?.stats || null);
-      console.log("🚀 ~ loadHazardData ~ response:", response)
       const heatmapData = response?.data ? convertGridToLatLng(response) : null;
-      console.log("🚀 ~ loadHazardData ~ heatmapData:", heatmapData)
       setHazardData(heatmapData);
     } catch (err) {
       setError(`Failed to load ${hazardType} data for ${period}: ${err.message}`);
