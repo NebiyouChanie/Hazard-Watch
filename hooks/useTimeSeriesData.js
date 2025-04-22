@@ -15,8 +15,7 @@ export function useTimeSeriesData() {
         try {
             const response = await fetch(`${API_TIMESERIES_URL}?aggregation=${aggregation}`);
             if (!response.ok) {
-                console.log("🚀 ~ fetchTimeSeries ~ response:", response)
-                throw new Error(`HTTP error! status: ${response.status}`);
+                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const data = await response.json();
             setTimeSeriesData(data);

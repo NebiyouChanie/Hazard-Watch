@@ -1,4 +1,3 @@
-// context/TimeSeriesDataContext.js
 'use client'
 import React, { createContext, useState, useCallback, useContext } from 'react';
 
@@ -9,37 +8,42 @@ export const TimeSeriesDataContext = createContext({
     loading: false,
     error: null,
     fetchTimeSeries: () => {},
-    currentPeriod: null, // Add currentPeriod to the context
+    currentPeriod: null,
 });
 
 export const TimeSeriesDataProvider = ({ children }) => {
     const [timeSeriesData, setTimeSeriesData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [currentPeriod, setCurrentPeriod] = useState(null); // State to hold the current period
+    const [currentPeriod, setCurrentPeriod] = useState(null);
 
-    const fetchTimeSeries = useCallback(async (aggregation = 'daily', region = null, date = null, period = 'daily') => { // Accept 'period' as an argument
+    const fetchTimeSeries = useCallback(async (aggregation = 'daily', region = null, date = null, period = 'daily') => {
         setLoading(true);
         setError(null);
         setCurrentPeriod(period); // Set the current period when fetching
         let url = `${API_TIMESERIES_URL}`;
 
-        if (aggregation === 'daily_by_day' && date) { // Ensure 'date' is present for this endpoint
+        if (aggregation === 'daily_by_day' && date) {
             url += `/daily_by_day?date=${date}`;
             if (region) {
                 url += `&region=${encodeURIComponent(region)}`;
             }
-        } else if (aggregation === 'monthly') {
-            url += `?aggregation=monthly`;
-            if (date) {
-                const [month, day] = date.split('-'); // Date is MM-DD, we only need the month
-                url += `&month=${month}`;
-            }
+        } else if (aggregation === 'monthly' && date) {
+            url += `/monthly?month=${date.split('-')[0]}`;
             if (region) {
                 url += `&region=${encodeURIComponent(region)}`;
             }
-        }
-         else {
+        } else if (aggregation === 'annual' && date) {
+            url += `/annual?year=${date}`;
+            if (region) {
+                url += `&region=${encodeURIComponent(region)}`;
+            }
+        } else if (aggregation === 'seasonal') {
+            url += `/seasonal`;
+            if (region) {
+                url += `&region=${encodeURIComponent(region)}`;
+            }
+        } else {
             url += `?aggregation=${aggregation}`;
             if (region) {
                 url += `&region=${encodeURIComponent(region)}`;
@@ -59,16 +63,20 @@ export const TimeSeriesDataProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [setCurrentPeriod]); // Add setCurrentPeriod to the dependency array
+
+    // Helper function to update currentPeriod
+    const updateCurrentPeriod = useCallback((period) => {
+        setCurrentPeriod(period);
+    }, [setCurrentPeriod]);
 
     return (
-        <TimeSeriesDataContext.Provider value={{ timeSeriesData, loading, error, fetchTimeSeries, currentPeriod }}>
+        <TimeSeriesDataContext.Provider value={{ timeSeriesData, loading, error, fetchTimeSeries, currentPeriod, updateCurrentPeriod }}>
             {children}
         </TimeSeriesDataContext.Provider>
     );
 };
 
-// Custom hook to use the TimeSeriesDataContext
 export const useTimeSeriesDataContext = () => {
     const context = useContext(TimeSeriesDataContext);
     if (!context) {

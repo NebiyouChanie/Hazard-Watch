@@ -21,8 +21,9 @@ import {
     SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import { hazardConfig } from '@/config/hazardConfig';
+import Link from 'next/link'; // Import the Link component
 
-const mainItems = [{ title: "Dashboard", url: "#", icon: Map }]
+const mainItems = [{ title: "Dashboard", url: "/", icon: Map }]
 
 const analysisItems = [
     { title: "Reports", url: "#", icon: BarChart2 },
@@ -38,6 +39,12 @@ export function AppSidebar() {
     const [calendarPosition, setCalendarPosition] = useState({ top: 0, left: 0 });
     const buttonRefs = useRef({});
     const [activeHazard, setActiveHazard] = useState(null);
+    const [showMonthYearPicker, setShowMonthYearPicker] = useState(false);
+    const [monthYearPickerPosition, setMonthYearPickerPosition] = useState({ top: 0, left: 0 });
+    const [selectedMonthYear, setSelectedMonthYear] = useState(new Date());
+    const [showYearPicker, setShowYearPicker] = useState(false);
+    const [yearPickerPosition, setYearPickerPosition] = useState({ top: 0, left: 0 });
+    const [selectedYear, setSelectedYear] = useState(new Date()); // Initialize as Date
 
     useEffect(() => {
         loadRegions();
@@ -47,40 +54,71 @@ export function AppSidebar() {
         setActiveHazard(hazardSlug);
         if (needsDate) {
             const buttonRect = event.currentTarget.getBoundingClientRect();
-            setCalendarPosition({
-                top: buttonRect.top + window.scrollY,
-                left: buttonRect.right + window.scrollX + 10
-            });
-            setOpenCalendarFor(openCalendarFor === `${hazardSlug}-${periodValue}` ? null : `${hazardSlug}-${periodValue}`);
+            if (periodValue === 'monthly') {
+                setMonthYearPickerPosition({
+                    top: buttonRect.top + window.scrollY,
+                    left: buttonRect.right + window.scrollX + 10
+                });
+                setShowMonthYearPicker(openCalendarFor === `${hazardSlug}-${periodValue}` ? false : true);
+                setOpenCalendarFor(openCalendarFor === `${hazardSlug}-${periodValue}` ? null : `${hazardSlug}-${periodValue}`);
+                setShowYearPicker(false);
+            } else if (periodValue === 'annual') {
+                setYearPickerPosition({
+                    top: buttonRect.top + window.scrollY,
+                    left: buttonRect.right + window.scrollX + 10
+                });
+                setShowYearPicker(true);
+                setOpenCalendarFor(`${hazardSlug}-${periodValue}`);
+                setShowMonthYearPicker(false);
+            }
+             else {
+                setCalendarPosition({
+                    top: buttonRect.top + window.scrollY,
+                    left: buttonRect.right + window.scrollX + 10
+                });
+                setShowMonthYearPicker(false);
+                setShowYearPicker(false);
+                setOpenCalendarFor(openCalendarFor === `${hazardSlug}-${periodValue}` ? null : `${hazardSlug}-${periodValue}`);
+            }
         } else {
             console.log('Calling loadHazardData without date for:', hazardSlug, periodValue);
             try {
                 await loadHazardData(null, periodValue, hazardSlug);
+                if (periodValue === 'all') {
+                    fetchTimeSeries('total');
+                }
             } catch (error) {
                 console.error('Error loading hazard data:', error);
             }
         }
     };
 
-    const formatDateForTimeSeries = (date) => {
+    const formatDateForTimeSeries = (date, aggregation) => {
         if (!date) return null;
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${month}-${day}`; // Format to MM-DD
+        if (aggregation === 'daily_by_day') {
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${month}-${day}`; // Format to MM-DD
+        } else if (aggregation === 'monthly') {
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${month}-${year}`; // Format to MM-YYYY
+        } else if (aggregation === 'yearly') {
+            return String(date.getFullYear()); // Format to<\ctrl3348>
+        }
+        return null;
     };
-    
+
     const handleDateChange = async (date) => {
         if (!date) return;
         setSelectedDate(date);
-        if (openCalendarFor) {
+        if (openCalendarFor && !showMonthYearPicker && !showYearPicker) {
             const [slug, period] = openCalendarFor.split('-');
             try {
                 await loadHazardData(date, period, slug);
                 let timeSeriesAggregation = '';
                 if (period === 'daily') {
                     timeSeriesAggregation = 'daily_by_day';
-                } else if (period === 'monthly') {
-                    timeSeriesAggregation = 'monthly';
                 }
                 if (timeSeriesAggregation) {
                     fetchTimeSeries(timeSeriesAggregation, period, formatDateForTimeSeries(date, timeSeriesAggregation)); // Pass 'period' here
@@ -92,12 +130,53 @@ export function AppSidebar() {
         }
     };
 
+    const handleMonthYearChange = async (date) => {
+        if (!date) return;
+        setSelectedMonthYear(date);
+        if (openCalendarFor && showMonthYearPicker) {
+            const [slug, period] = openCalendarFor.split('-');
+            try {
+                const formattedMonthYear = `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getFullYear())}`;
+                await loadHazardData(date, period, slug);
+                if (period === 'monthly') {
+                    fetchTimeSeries('monthly', period, formattedMonthYear); // Format to MM-YYYY
+                }
+            } catch (error) {
+                console.error(`Error loading ${period} data for ${slug}:`, error);
+            }
+            setShowMonthYearPicker(false);
+            setOpenCalendarFor(null);
+        }
+    };
+
+    const handleYearChange = async (date) => {
+        if (!date) return;
+        setSelectedYear(date);
+        if (openCalendarFor && showYearPicker) {
+            const [slug, period] = openCalendarFor.split('-');
+            try {
+                await loadHazardData(date, period, slug);
+                // Prevent fetchTimeSeries for 'annual' period here
+                if (period === 'annual') {
+                    fetchTimeSeries('annual', period, formatDateForTimeSeries(date, 'yearly'));
+                }
+            } catch (error) {
+                console.error(`Error loading ${period} data for ${slug}:`, error);
+            }
+            setShowYearPicker(false);
+            setOpenCalendarFor(null);
+        }
+    };
+
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (openCalendarFor &&
                 !event.target.closest('.calendar-container') &&
+                !event.target.closest('.react-datepicker-wrapper') && // Exclude the date/month/year picker
                 !Object.values(buttonRefs.current).some(ref => ref && ref.contains(event.target))) {
                 setOpenCalendarFor(null);
+                setShowMonthYearPicker(false);
+                setShowYearPicker(false);
             }
         };
 
@@ -105,10 +184,10 @@ export function AppSidebar() {
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [openCalendarFor]);
+    }, [openCalendarFor, showMonthYearPicker, showYearPicker]);
 
     return (
-        <div className="relative flex">
+        <div className="relative flex z-[1000]">
             <Sidebar className="w-64 border-r bg-gradient-to-b from-blue-50/20 to-white">
                 <SidebarContent className="px-3 py-4">
                     <div className="mb-6 px-4 flex items-center gap-2">
@@ -152,10 +231,10 @@ export function AppSidebar() {
                                                 "group flex w-full items-center rounded-lg px-3 py-2 text-gray-700 transition-all",
                                                 "hover:bg-blue-50 hover:text-blue-700"
                                             )}>
-                                                <a href="#">
+                                                <Link href="/dashboard" className="w-full flex items-center">
                                                     <hazardItem.icon className="h-5 w-5 flex-shrink-0" />
                                                     <span className="ml-3">{hazardItem.title}</span>
-                                                </a>
+                                                </Link>
                                             </SidebarMenuButton>
                                             <div className="ml-8 space-y-1">
                                                 {hazardItem.periods.map((period) => (
@@ -179,49 +258,10 @@ export function AppSidebar() {
                             </SidebarMenu>
                         </SidebarGroupContent>
                     </SidebarGroup>
-
-                    <SidebarGroup className="mt-6">
-                        <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                            Analysis
-                        </SidebarGroupLabel>
-                        <SidebarGroupContent className="mt-2">
-                            <SidebarMenu>
-                                {analysisItems.map((item) => (
-                                    <SidebarMenuItem key={item.title}>
-                                        <SidebarMenuButton asChild className={cn(
-                                            "group flex items-center rounded-lg px-3 py-2 text-gray-700 transition-all",
-                                            "hover:bg-blue-50 hover:text-blue-700"
-                                        )}>
-                                            <a href={item.url}>
-                                                <item.icon className="h-5 w-5 flex-shrink-0" />
-                                                <span className="ml-3">{item.title}</span>
-                                            </a>
-                                        </SidebarMenuButton>
-                                    </SidebarMenuItem>
-                                ))}
-                            </SidebarMenu>
-                        </SidebarGroupContent>
-                    </SidebarGroup>
-
-                    <div className="mt-auto pt-6">
-                        <SidebarMenu>
-                            <SidebarMenuItem>
-                                <SidebarMenuButton asChild className={cn(
-                                    "group flex items-center rounded-lg px-3 py-2 text-gray-700 transition-all",
-                                    "hover:bg-blue-50 hover:text-blue-700"
-                                )}>
-                                    <a href="#">
-                                        <Settings className="h-5 w-5 flex-shrink-0" />
-                                        <span className="ml-3">Settings</span>
-                                    </a>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-                        </SidebarMenu>
-                    </div>
                 </SidebarContent>
             </Sidebar>
 
-            {openCalendarFor && (
+            {openCalendarFor && openCalendarFor.endsWith('-daily') && (
                 <div
                     className="calendar-container absolute z-1000 bg-white p-2 rounded-md shadow-lg border"
                     style={{
@@ -237,6 +277,46 @@ export function AppSidebar() {
                         showMonthDropdown
                         dropdownMode="select"
                         dateFormat="yyyy-MM-dd"
+                    />
+                </div>
+            )}
+
+            {openCalendarFor && openCalendarFor.endsWith('-monthly') && (
+                <div
+                    className="calendar-container absolute z-1000 bg-white p-2 rounded-md shadow-lg border"
+                    style={{
+                        top: `${monthYearPickerPosition.top}px`,
+                        left: `${monthYearPickerPosition.left}px`
+                    }}
+                >
+                    <DatePicker
+                        selected={selectedMonthYear}
+                        onChange={handleMonthYearChange}
+                        inline
+                        showMonthYearPicker
+                        dateFormat="MM/yyyy"
+                        showYearDropdown
+                        dropdownMode="select"
+                    />
+                </div>
+            )}
+
+            {openCalendarFor && openCalendarFor.endsWith('-annual') && (
+                <div
+                    className="calendar-container absolute z-1000 bg-white p-2 rounded-md shadow-lg border"
+                    style={{
+                        top: `${yearPickerPosition.top}px`,
+                        left: `${yearPickerPosition.left}px`
+                    }}
+                >
+                    <DatePicker
+                        selected={selectedYear}
+                        onChange={handleYearChange}
+                        inline
+                        showYearPicker
+                        dateFormat="yyyy"
+                        showYearDropdown
+                        dropdownMode="select"
                     />
                 </div>
             )}

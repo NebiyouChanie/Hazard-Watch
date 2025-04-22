@@ -4,12 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { useTimeSeriesData } from '@/hooks/useTimeSeriesData';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Label } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Label, AxisTick } from 'recharts';
 import { cn } from '@/lib/utils';
 
 const AnalyticsDashboardPage = () => {
     const [aggregation, setAggregation] = useState('daily');
-    const [selectedMonth, setSelectedMonth] = useState(''); // New state for selected month
+    const [selectedMonth, setSelectedMonth] = useState('03'); // Initialize with March as per the screenshot
     const { timeSeriesData, loading, error, fetchTimeSeries } = useTimeSeriesData();
 
     const years = Array.from({ length: 10 }, (_, i) => 2005 + i); // Array of years
@@ -20,16 +20,24 @@ const AnalyticsDashboardPage = () => {
     };
 
     useEffect(() => {
-        fetchTimeSeries(aggregation);
-    }, [aggregation, fetchTimeSeries]);
+        fetchTimeSeries(aggregation, 'daily_by_day', selectedMonth); // Fetch daily data for the selected month on load
+    }, [fetchTimeSeries, selectedMonth]); // Added selectedMonth as a dependency
 
     const handleAggregationChange = (newAggregation) => {
         setAggregation(newAggregation);
         setSelectedMonth(''); // Reset selected month when aggregation changes
+        if (newAggregation === 'daily') {
+            setSelectedMonth('01'); // Set to first month if switching to daily
+        }
     };
 
     const handleMonthChange = (newMonth) => {
-        setSelectedMonth(newMonth === null ? '' : newMonth); // Handle null for "All Months"
+        setSelectedMonth(newMonth === null ? '' : newMonth);
+        if (aggregation === 'daily' && newMonth) {
+            fetchTimeSeries(aggregation, 'daily_by_day', newMonth); // Fetch data for the selected month
+        } else if (aggregation === 'monthly' && newMonth) {
+            fetchTimeSeries(aggregation, 'monthly', newMonth); // Fetch data for the selected month
+        }
     };
 
     const formatDailyTick = (tick) => {
@@ -40,14 +48,34 @@ const AnalyticsDashboardPage = () => {
     };
 
     const formatMonthTick = (tick) => {
-        if (aggregation === 'monthly' && monthNames[tick]) {
-            return monthNames[tick];
+        return tick; // Use month number for X-axis
+    };
+
+    const CustomTooltip = ({ active, payload, label }) => {
+        if (active && payload && payload.length) {
+            return (
+                <div className="p-2 bg-white border rounded shadow-md">
+                    <p className="font-semibold">{aggregation === 'monthly' && monthNames[label] ? monthNames[label] : label}</p>
+                    {payload.map((item) => (
+                        <p key={item.dataKey} className="text-gray-700">
+                            {item.name}: {item.value ? parseFloat(item.value).toFixed(2) : 'N/A'} mm
+                        </p>
+                    ))}
+                </div>
+            );
         }
-        return tick;
+        return null;
+    };
+
+    const CustomTick = ({ x, y, payload }) => {
+        return (
+            <g transform={`translate(${x},${y})`}>
+                <text x={0} y={0} dy={16} textAnchor="end" fill="#666" transform="rotate(-35)">{payload.value}</text>
+            </g>
+        );
     };
 
     const monthOptions = [
-        { value: null, label: 'All Months' },
         { value: '01', label: 'January' },
         { value: '02', label: 'February' },
         { value: '03', label: 'March' },
@@ -75,15 +103,15 @@ const AnalyticsDashboardPage = () => {
 
     if (timeSeriesData) {
         if (aggregation === 'annual') {
-            chartData = Object.entries(timeSeriesData).map(([year, value]) => ({ year, value }));
+            chartData = Object.entries(timeSeriesData).map(([year, value]) => ({ year, value: parseFloat(value).toFixed(2) }));
             dataKeys = ['value'];
         } else if (aggregation === 'daily') {
             chartData = Object.entries(timeSeriesData)
-                .filter(([timePeriod]) => !selectedMonth || timePeriod.startsWith(selectedMonth + '-'))
+                .filter(([timePeriod]) => timePeriod.startsWith(selectedMonth + '-'))
                 .map(([timePeriod, values]) => {
                     const entry = { timePeriod };
                     values.forEach((value, index) => {
-                        entry[years[index]] = value; // Use year as key
+                        entry[years[index]] = parseFloat(value).toFixed(2); // Use year as key
                     });
                     return entry;
                 });
@@ -94,7 +122,7 @@ const AnalyticsDashboardPage = () => {
             chartData = Object.entries(timeSeriesData).map(([month, values]) => {
                 const entry = { timePeriod: month }; // Use month number as timePeriod
                 values.forEach((value, index) => {
-                    entry[years[index]] = value; // Use year as key
+                    entry[years[index]] = parseFloat(value).toFixed(2); // Use year as key
                 });
                 return entry;
             });
@@ -106,7 +134,7 @@ const AnalyticsDashboardPage = () => {
             chartData = Object.entries(timeSeriesData).map(([season, values]) => {
                 const entry = { timePeriod: season };
                 values.forEach((value, index) => {
-                    entry[years[index]] = value; // Use year as key
+                    entry[years[index]] = parseFloat(value).toFixed(2); // Use year as key
                 });
                 return entry;
             });
@@ -118,7 +146,7 @@ const AnalyticsDashboardPage = () => {
 
     return (
         <div className="w-full">
-            <Card className="max-w-4xl mx-auto">
+            <Card className=" mx-auto">
                 <CardHeader>
                     <CardTitle className="text-2xl font-semibold">Analytics Dashboard</CardTitle>
                 </CardHeader>
@@ -147,7 +175,7 @@ const AnalyticsDashboardPage = () => {
                                 </label>
                                 <Select onValueChange={handleMonthChange} value={selectedMonth}>
                                     <SelectTrigger className="w-[150px]">
-                                        <SelectValue placeholder="All Months" />
+                                        <SelectValue placeholder="Select Month" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {monthOptions.map((month) => (
@@ -163,7 +191,7 @@ const AnalyticsDashboardPage = () => {
 
                     {chartData.length > 0 ? (
                         <ResponsiveContainer width="100%" height={400}>
-                            <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 30 }}>
+                            <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 70 }}> {/* Increased bottom margin further */}
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis
                                     dataKey="timePeriod"
@@ -173,20 +201,21 @@ const AnalyticsDashboardPage = () => {
                                     interval={
                                         aggregation === 'daily'
                                             ? chartData.length > 30 ? Math.ceil(chartData.length / 30) : 'preserveStartEnd'
-                                            : 'preserveStartEnd' // Show all months
+                                            : 'preserveStartEnd' // Show all months/seasons
                                     }
+                                    tick={<CustomTick />} // Use custom tick for spacing
                                 >
                                     <Label
                                         value={aggregation === 'annual' ? 'Year' : (aggregation === 'daily' ? 'Day' : 'Month/Season')}
-                                        offset={0}
+                                        offset={50} // Increased offset further
                                         position="bottom"
                                     />
                                 </XAxis>
                                 <YAxis>
-                                    <Label value="Value" angle={-90} position="left" offset={0} />
+                                    <Label value="Value (mm)" angle={-90} position="left" offset={0} />
                                 </YAxis>
-                                <Tooltip />
-                                <Legend />
+                                <Tooltip content={<CustomTooltip />} />
+                                <Legend verticalAlign="bottom" align="left" wrapperStyle={{ position: 'relative', bottom: -40 }} /> {/* Moved Legend and added wrapperStyle */}
                                 {dataKeys.map((year) => (
                                     <Line
                                         key={year}
