@@ -6,7 +6,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useHazardDataContext } from '@/context/HazardDataContext';
-import { useTimeSeriesDataContext } from '@/context/TimeSeriesDataContext'; // Import TimeSeries Context
+import { useTimeSeriesDataContext } from '@/context/TimeSeriesDataContext';
 import { useRouter } from 'next/navigation';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -21,7 +21,7 @@ import {
     SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import { hazardConfig } from '@/config/hazardConfig';
-import Link from 'next/link'; // Import the Link component
+import Link from 'next/link';
 
 const mainItems = [{ title: "Dashboard", url: "/", icon: Map }]
 
@@ -30,21 +30,35 @@ const analysisItems = [
     { title: "Layers", url: "#", icon: Layers }
 ]
 
+const seasonOptions = ['MAM', 'JJAS', 'OND']; // Available season keys
+
 export function AppSidebar() {
     const { loadHazardData, loadRegions } = useHazardDataContext();
-    const { fetchTimeSeries } = useTimeSeriesDataContext(); // Get fetchTimeSeries
+    const { fetchTimeSeries } = useTimeSeriesDataContext();
     const router = useRouter();
+    
+    // State for date pickers
     const [openCalendarFor, setOpenCalendarFor] = useState(null);
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [calendarPosition, setCalendarPosition] = useState({ top: 0, left: 0 });
-    const buttonRefs = useRef({});
-    const [activeHazard, setActiveHazard] = useState(null);
+    
+    // State for month/year picker
     const [showMonthYearPicker, setShowMonthYearPicker] = useState(false);
     const [monthYearPickerPosition, setMonthYearPickerPosition] = useState({ top: 0, left: 0 });
     const [selectedMonthYear, setSelectedMonthYear] = useState(new Date());
+    
+    // State for year picker
     const [showYearPicker, setShowYearPicker] = useState(false);
     const [yearPickerPosition, setYearPickerPosition] = useState({ top: 0, left: 0 });
-    const [selectedYear, setSelectedYear] = useState(new Date()); // Initialize as Date
+    const [selectedYear, setSelectedYear] = useState(new Date());
+    
+    // State for seasonal picker
+    const [showSeasonalPicker, setShowSeasonalPicker] = useState(false);
+    const [seasonalPickerPosition, setSeasonalPickerPosition] = useState({ top: 0, left: 0 });
+    const [selectedSeason, setSelectedSeason] = useState('MAM');
+    
+    const [activeHazard, setActiveHazard] = useState(null);
+    const buttonRefs = useRef({});
 
     useEffect(() => {
         loadRegions();
@@ -54,7 +68,18 @@ export function AppSidebar() {
         setActiveHazard(hazardSlug);
         if (needsDate) {
             const buttonRect = event.currentTarget.getBoundingClientRect();
-            if (periodValue === 'monthly') {
+            
+            if (periodValue === 'seasonal') {
+                setSeasonalPickerPosition({
+                    top: buttonRect.top + window.scrollY,
+                    left: buttonRect.right + window.scrollX + 10
+                });
+                setShowSeasonalPicker(openCalendarFor === `${hazardSlug}-${periodValue}` ? false : true);
+                setOpenCalendarFor(openCalendarFor === `${hazardSlug}-${periodValue}` ? null : `${hazardSlug}-${periodValue}`);
+                setShowMonthYearPicker(false);
+                setShowYearPicker(false);
+                return;
+            } else if (periodValue === 'monthly') {
                 setMonthYearPickerPosition({
                     top: buttonRect.top + window.scrollY,
                     left: buttonRect.right + window.scrollX + 10
@@ -70,8 +95,7 @@ export function AppSidebar() {
                 setShowYearPicker(true);
                 setOpenCalendarFor(`${hazardSlug}-${periodValue}`);
                 setShowMonthYearPicker(false);
-            }
-             else {
+            } else {
                 setCalendarPosition({
                     top: buttonRect.top + window.scrollY,
                     left: buttonRect.right + window.scrollX + 10
@@ -98,13 +122,13 @@ export function AppSidebar() {
         if (aggregation === 'daily_by_day') {
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
-            return `${month}-${day}`; // Format to MM-DD
+            return `${month}-${day}`;
         } else if (aggregation === 'monthly') {
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const year = date.getFullYear();
-            return `${month}-${year}`; // Format to MM-YYYY
+            return `${month}-${year}`;
         } else if (aggregation === 'yearly') {
-            return String(date.getFullYear()); // Format to<\ctrl3348>
+            return String(date.getFullYear());
         }
         return null;
     };
@@ -112,7 +136,7 @@ export function AppSidebar() {
     const handleDateChange = async (date) => {
         if (!date) return;
         setSelectedDate(date);
-        if (openCalendarFor && !showMonthYearPicker && !showYearPicker) {
+        if (openCalendarFor && !showMonthYearPicker && !showYearPicker && !showSeasonalPicker) {
             const [slug, period] = openCalendarFor.split('-');
             try {
                 await loadHazardData(date, period, slug);
@@ -121,7 +145,7 @@ export function AppSidebar() {
                     timeSeriesAggregation = 'daily_by_day';
                 }
                 if (timeSeriesAggregation) {
-                    fetchTimeSeries(timeSeriesAggregation, period, formatDateForTimeSeries(date, timeSeriesAggregation)); // Pass 'period' here
+                    fetchTimeSeries(timeSeriesAggregation, period, formatDateForTimeSeries(date, timeSeriesAggregation));
                 }
             } catch (error) {
                 console.error(`Error loading ${period} data for ${slug}:`, error);
@@ -139,7 +163,7 @@ export function AppSidebar() {
                 const formattedMonthYear = `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getFullYear())}`;
                 await loadHazardData(date, period, slug);
                 if (period === 'monthly') {
-                    fetchTimeSeries('monthly', period, formattedMonthYear); // Format to MM-YYYY
+                    fetchTimeSeries('monthly', period, formattedMonthYear);
                 }
             } catch (error) {
                 console.error(`Error loading ${period} data for ${slug}:`, error);
@@ -156,7 +180,6 @@ export function AppSidebar() {
             const [slug, period] = openCalendarFor.split('-');
             try {
                 await loadHazardData(date, period, slug);
-                // Prevent fetchTimeSeries for 'annual' period here
                 if (period === 'annual') {
                     fetchTimeSeries('annual', period, formatDateForTimeSeries(date, 'yearly'));
                 }
@@ -168,15 +191,31 @@ export function AppSidebar() {
         }
     };
 
+    const handleSeasonalSubmit = async () => {
+        if (openCalendarFor && showSeasonalPicker) {
+            const [slug, period] = openCalendarFor.split('-');
+            try {
+                const seasonKey = `${selectedSeason}-${selectedYear.getFullYear()}`;
+                await loadHazardData(seasonKey, period, slug);
+                fetchTimeSeries('seasonal', period, seasonKey);
+            } catch (error) {
+                console.error(`Error loading ${period} data for ${slug}:`, error);
+            }
+            setShowSeasonalPicker(false);
+            setOpenCalendarFor(null);
+        }
+    };
+
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (openCalendarFor &&
                 !event.target.closest('.calendar-container') &&
-                !event.target.closest('.react-datepicker-wrapper') && // Exclude the date/month/year picker
+                !event.target.closest('.react-datepicker-wrapper') &&
                 !Object.values(buttonRefs.current).some(ref => ref && ref.contains(event.target))) {
                 setOpenCalendarFor(null);
                 setShowMonthYearPicker(false);
                 setShowYearPicker(false);
+                setShowSeasonalPicker(false);
             }
         };
 
@@ -184,7 +223,7 @@ export function AppSidebar() {
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [openCalendarFor, showMonthYearPicker, showYearPicker]);
+    }, [openCalendarFor, showMonthYearPicker, showYearPicker, showSeasonalPicker]);
 
     return (
         <div className="relative flex z-[1000]">
@@ -261,6 +300,7 @@ export function AppSidebar() {
                 </SidebarContent>
             </Sidebar>
 
+            {/* Daily Date Picker */}
             {openCalendarFor && openCalendarFor.endsWith('-daily') && (
                 <div
                     className="calendar-container absolute z-1000 bg-white p-2 rounded-md shadow-lg border"
@@ -281,6 +321,7 @@ export function AppSidebar() {
                 </div>
             )}
 
+            {/* Monthly Date Picker */}
             {openCalendarFor && openCalendarFor.endsWith('-monthly') && (
                 <div
                     className="calendar-container absolute z-1000 bg-white p-2 rounded-md shadow-lg border"
@@ -301,6 +342,7 @@ export function AppSidebar() {
                 </div>
             )}
 
+            {/* Annual Year Picker */}
             {openCalendarFor && openCalendarFor.endsWith('-annual') && (
                 <div
                     className="calendar-container absolute z-1000 bg-white p-2 rounded-md shadow-lg border"
@@ -318,6 +360,52 @@ export function AppSidebar() {
                         showYearDropdown
                         dropdownMode="select"
                     />
+                </div>
+            )}
+
+            {/* Seasonal Picker */}
+            {openCalendarFor && openCalendarFor.endsWith('-seasonal') && (
+                <div
+                    className="calendar-container absolute z-1000 bg-white p-4 rounded-md shadow-lg border"
+                    style={{
+                        top: `${seasonalPickerPosition.top}px`,
+                        left: `${seasonalPickerPosition.left}px`
+                    }}
+                >
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Season</label>
+                        <div className="flex space-x-2">
+                            {seasonOptions.map(season => (
+                                <button
+                                    key={season}
+                                    onClick={() => setSelectedSeason(season)}
+                                    className={`px-3 py-1 text-sm rounded ${selectedSeason === season 
+                                        ? 'bg-blue-500 text-white' 
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                                >
+                                    {season}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+                        <DatePicker
+                            selected={selectedYear}
+                            onChange={date => setSelectedYear(date)}
+                            showYearPicker
+                            dateFormat="yyyy"
+                            className="border rounded p-1 w-full"
+                        />
+                    </div>
+                    
+                    <button
+                        onClick={handleSeasonalSubmit}
+                        className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition"
+                    >
+                        Load Data
+                    </button>
                 </div>
             )}
         </div>
