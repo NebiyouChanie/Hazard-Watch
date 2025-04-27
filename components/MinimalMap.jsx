@@ -5,7 +5,7 @@ import { MapContainer, TileLayer, useMap, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useHazardDataContext } from '@/context/HazardDataContext';
-import { useTimeSeriesDataContext } from '@/context/TimeSeriesDataContext'; // Import TimeSeries Context
+import { useTimeSeriesDataContext } from '@/context/TimeSeriesDataContext';
 import RainfallStatsCard from './RainfallStatsCard';
 import RainfallLegend from './RainfallLegend';
 
@@ -20,12 +20,12 @@ function getColorForIntensity(normalizedIntensity) {
 
 function GridLayer({ rainfallData, cellSize = 0.4 }) {
   const map = useMap();
-  const gridLayerRef = useRef(null);
   const [renderedCells, setRenderedCells] = useState([]);
 
   useEffect(() => {
     if (!map || !rainfallData) return;
 
+    // Clear existing layers
     map.eachLayer(layer => {
       if (layer instanceof L.Rectangle) {
         map.removeLayer(layer);
@@ -66,7 +66,7 @@ function GridLayer({ rainfallData, cellSize = 0.4 }) {
           const rect = L.rectangle(cellBounds, {
             fillColor: color,
             fillOpacity: 0.8,
-            color: 'transparent', // Keep the grid cell borders transparent
+            color: 'transparent',
             weight: 0,
           }).addTo(map);
           newRenderedCells.push(rect);
@@ -83,7 +83,6 @@ function GridLayer({ rainfallData, cellSize = 0.4 }) {
           map.removeLayer(cell);
         }
       });
-      setRenderedCells([]);
     };
   }, [map, rainfallData, cellSize]);
 
@@ -95,15 +94,19 @@ const MinimalMap = () => {
     hazardData: rainfallData,
     loading: hazardLoading,
     error: hazardError,
-    regions: regionalData, // Get regions from the context
+    regions: regionalData,
   } = useHazardDataContext();
-  const { timeSeriesData, loading: timeseriesLoading, error: timeseriesError, currentPeriod } = useTimeSeriesDataContext();
-
+  const { 
+    loading: timeseriesLoading, 
+    error: timeseriesError, 
+    currentPeriod 
+  } = useTimeSeriesDataContext();
+ 
   const regionStyle = {
     color: 'brown',
     weight: 2,
     opacity: 1,
-    fillOpacity: 0, // Make the fill transparent so the grid is visible underneath
+    fillOpacity: 0,
   };
 
   if (hazardLoading || timeseriesLoading) {
@@ -116,7 +119,7 @@ const MinimalMap = () => {
     </div>;
   }
 
-  return (
+   return (
     <div className="h-[700px] w-full relative">
       <MapContainer
         center={[9.0, 38.7]}
@@ -142,7 +145,7 @@ const MinimalMap = () => {
         {rainfallData && Array.isArray(rainfallData) && rainfallData.length > 0 && <RainfallLegend />}
       </MapContainer>
 
-      {timeSeriesData && <RainfallStatsCard stats={timeSeriesData} period={currentPeriod} />}
+      <RainfallStatsCard/>
     </div>
   );
 };

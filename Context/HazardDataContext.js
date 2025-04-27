@@ -1,8 +1,23 @@
+// context/HazardDataContext.js
 'use client';
-import { createContext, useContext } from 'react';
+import { createContext, useState, useCallback, useContext } from 'react';
 import { useHazardData } from '@/hooks/useHazardData';
 
-const HazardDataContext = createContext();
+const HazardDataContext = createContext({
+  regions: null,
+  hazardData: null,
+  loading: false,
+  stats: null,
+  error: null,
+  mapBounds: null,
+  selectedHazardType: null,
+  setSelectedHazardType: () => {},
+  availablePeriods: {},
+  availableDates: {},
+  loadRegions: () => {},
+  loadHazardData: () => {},
+  clearError: () => {},
+});
 
 export function HazardDataProvider({ children }) {
   const hazardData = useHazardData();
