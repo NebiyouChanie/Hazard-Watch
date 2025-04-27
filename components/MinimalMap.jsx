@@ -98,8 +98,7 @@ const MinimalMap = () => {
   } = useHazardDataContext();
   const { 
     loading: timeseriesLoading, 
-    error: timeseriesError, 
-    currentPeriod 
+    error: timeseriesError,  
   } = useTimeSeriesDataContext();
  
   const regionStyle = {

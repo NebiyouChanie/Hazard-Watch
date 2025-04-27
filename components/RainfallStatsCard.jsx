@@ -46,31 +46,33 @@ const RainfallStatsCard = () => {
       };
     }
     
-    if (currentPeriod === 'monthly' && availableDates.months?.length) {
-      const sortedMonths = availableDates.months
-        .map(monthStr => {
-          const [year, month] = monthStr.split('-');
-          return new Date(year, month - 1);
-        })
-        .sort((a, b) => a - b);
+    if (currentPeriod === 'monthly' && availableDates.dates?.length) {
+        // Get all unique year-month combinations from available dates
+        const yearMonths = [...new Set(
+          availableDates.dates.map(dateStr => dateStr.slice(0, 7)) // Extract YYYY-MM
+        )].sort();
+        
+        const minDate = yearMonths[0] ? new Date(`${yearMonths[0]}-01`) : null;
+        const maxDate = yearMonths[yearMonths.length - 1] 
+          ? new Date(`${yearMonths[yearMonths.length - 1]}-01`) 
+          : null;
       
-      return {
-        min: sortedMonths[0],
-        max: sortedMonths[sortedMonths.length - 1]
-      };
-    }
+        return {
+          min: minDate,
+          max: maxDate
+        };
+      }
     
-    if (currentPeriod === 'annual' && availableDates.years?.length) {
-      const sortedYears = availableDates.years
-        .map(year => new Date(year, 0))
-        .sort((a, b) => a - b);
-      
-      return {
-        min: sortedYears[0],
-        max: sortedYears[sortedYears.length - 1]
-      };
-    }
-    
+      if (currentPeriod === 'annual' && availableDates.years?.length) {
+        // Sort years numerically (as strings)
+        const sortedYears = [...availableDates.years].sort();
+        
+        return {
+          min: new Date(sortedYears[0], 0, 1),   
+          max: new Date(sortedYears[sortedYears.length - 1], 11, 31)   
+        };
+      }
+          
     return { min: null, max: null };
   };
 
@@ -93,11 +95,11 @@ const RainfallStatsCard = () => {
       
       if (currentPeriod === 'daily') {
         setSelectedDate(maxDate);
-        loadInitialData(maxDate, 'daily');
+         loadInitialData(maxDate, 'daily');
       } 
       else if (currentPeriod === 'monthly') {
         setSelectedMonthYear(maxDate);
-        loadInitialData(maxDate, 'monthly');
+         loadInitialData(maxDate, 'monthly');
       } 
       else if (currentPeriod === 'annual') {
         setSelectedYear(maxDate);

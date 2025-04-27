@@ -24,24 +24,20 @@ import Link from 'next/link';
 
 const mainItems = [{ title: "Dashboard", url: "/", icon: Map }]
 
-const analysisItems = [
-    { title: "Reports", url: "#", icon: BarChart2 },
-    { title: "Layers", url: "#", icon: Layers }
-]
+ 
 
 export function AppSidebar() {
     const { loadRegions } = useHazardDataContext();
-    const { updateCurrentPeriod, currentPeriod } = useTimeSeriesDataContext(); // Properly destructure here
+    const { updateCurrentPeriod, currentPeriod } = useTimeSeriesDataContext();  
     const router = useRouter();
     
     const [activeHazard, setActiveHazard] = useState(null);
-
+ 
     const handleHazardClick = async (hazardSlug, periodValue) => {
         setActiveHazard(hazardSlug);
-        updateCurrentPeriod(periodValue); // This should now work
+        updateCurrentPeriod(periodValue);  
         
-        // Load regions if not already loaded
-        if (loadRegions) {
+         if (loadRegions) {
             await loadRegions();
         }
     };
