@@ -240,17 +240,17 @@ const RainfallStatsCard = () => {
 
     dateControls = (
       <div className="w-full">
-        <DatePicker
-          selected={selectedDate}
-          onChange={handleDateChange}
-          minDate={minDate}
-          maxDate={maxDate}
-          placeholderText="Select date"
-          className="w-full p-2 border rounded"
-          dateFormat="MMMM d, yyyy"
-          showYearDropdown
-          scrollableYearDropdown
-          yearDropdownItemNumber={10}
+    <DatePicker
+        onChange={handleDateChange}
+        minDate={minDate}
+        maxDate={maxDate}
+        placeholderText="Select date"
+        className="w-full p-2 border rounded"
+        dateFormat="MMMM d, yyyy"
+        showMonthDropdown         
+        showYearDropdown         
+        scrollableYearDropdown
+        yearDropdownItemNumber={10}
         />
       </div>
     );
