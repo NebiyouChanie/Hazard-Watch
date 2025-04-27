@@ -72,6 +72,45 @@ const RainfallStatsCard = () => {
           max: new Date(sortedYears[sortedYears.length - 1], 11, 31)   
         };
       }
+
+      if (currentPeriod === 'seasonal' && availableDates.dates?.length) {
+        // Get all unique year-season combinations from available dates
+        const seasonMap = {};
+        
+        availableDates.dates.forEach(dateStr => {
+          const date = parseISO(dateStr);
+          if (!isValid(date)) return;
+          
+          const year = date.getFullYear();
+          const month = date.getMonth() + 1; // 1-12
+          
+          let season;
+          if (month >= 3 && month <= 5) season = 'MAM';
+          else if (month >= 6 && month <= 9) season = 'JJAS';
+          else if (month >= 10 || month <= 2) season = 'OND';
+          
+          const seasonKey = `${season}-${year}`;
+          seasonMap[seasonKey] = true;
+        });
+        
+        const seasons = Object.keys(seasonMap).sort();
+        if (seasons.length === 0) return { min: null, max: null };
+        
+        // Convert first and last seasons to Date objects (using middle month)
+        const seasonToDate = (seasonStr) => {
+          const [season, year] = seasonStr.split('-');
+          let month;
+          if (season === 'MAM') month = 4; // April
+          else if (season === 'JJAS') month = 7; // July
+          else month = 11; // November
+          return new Date(year, month);
+        };
+        
+        return {
+          min: seasonToDate(seasons[0]),
+          max: seasonToDate(seasons[seasons.length - 1])
+        };
+      }
           
     return { min: null, max: null };
   };
@@ -106,9 +145,22 @@ const RainfallStatsCard = () => {
         loadInitialData(maxDate, 'annual');
       } 
       else if (currentPeriod === 'seasonal') {
-        setSelectedYear(maxDate);
-        setSelectedSeason('MAM');
-        loadInitialData('MAM', 'seasonal');
+        // Extract year and month from maxDate
+        const year = maxDate.getFullYear();
+        const month = maxDate.getMonth() + 1; // Months are 0-indexed in JS (0-11)
+      
+        // Determine the season based on the month
+        let season;
+        if (month >= 3 && month <= 5) season = 'MAM';      // Spring (March-May)
+        else if (month >= 6 && month <= 9) season = 'JJAS';  // Summer (June-Sept)
+        else season = 'OND';                                 // Autumn/Winter (Oct-Dec)
+      
+        // Format as "SEASON-YEAR" (e.g., "MAM-2024")
+        const seasonDate = `${season}-${year}`;
+      
+        // Update state and load data
+        setSelectedSeason(season);
+         loadInitialData(seasonDate, 'seasonal');
       }
     }
   }, [availableDates, currentPeriod, initialLoadDone, minDate, maxDate]);
@@ -129,9 +181,9 @@ const RainfallStatsCard = () => {
         await loadHazardData(date, 'annual', 'rainfall');
       } 
       else if (periodType === 'seasonal') {
-        const seasonKey = `${selectedSeason}-${date.getFullYear()}`;
-        await fetchTimeSeries('seasonal', null, seasonKey, 'seasonal');
-        await loadHazardData(seasonKey, 'seasonal', 'rainfall');
+        const season = date.split('-')[0]
+        await fetchTimeSeries('seasonal', null, season, 'seasonal');
+        await loadHazardData(date, 'seasonal', 'rainfall');
       }
     } catch (error) {
       console.error('Error loading initial data:', error);

@@ -20,7 +20,7 @@ export const hazardConfig = [
     periods: [
       { label: "Daily", value: "daily", needsDate: true },
       { label: "Monthly", value: "monthly", needsDate: true },
-      { label: "Seasonal", value: "summer", needsDate: false },
+      { label: "Seasonal", value: "seasonal", needsDate: false },
       { label: "Annual", value: "annual", needsDate: true },
     ],
   },
