@@ -106,7 +106,8 @@ export function useHazardData() {
     }
   }, [regions]);
 
-  const loadHazardData = useCallback(async (date, period, hazardType) => {
+// Update the loadHazardData function in useHazardData hook
+const loadHazardData = useCallback(async (date, period, hazardType) => {
     const cacheKey = `${hazardType}-${period}-${date}`;
     if (lastFetched[cacheKey]) return;
     
@@ -117,7 +118,7 @@ export function useHazardData() {
       if (date) {
         formattedDate = formatDate(date, period);
       }
-
+  
       let response;
       switch (hazardType) {
         case 'rainfall':
@@ -132,6 +133,7 @@ export function useHazardData() {
       setStats(response?.stats || null);
       const heatmapData = response?.data ? convertGridToLatLng(response) : null;
       setHazardData(heatmapData);
+      setSelectedHazardType(hazardType);
       setLastFetched(prev => ({ ...prev, [cacheKey]: true }));
     } catch (err) {
       setError(`Failed to load ${hazardType} data for ${period}: ${err.message}`);
@@ -139,6 +141,7 @@ export function useHazardData() {
       setLoading(false);
     }
   }, [formatDate, convertGridToLatLng, lastFetched]);
+  
 
   const loadAvailablePeriods = useCallback(async (hazardType) => {
     if (availablePeriods[hazardType]) return;

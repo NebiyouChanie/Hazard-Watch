@@ -1,4 +1,4 @@
-// components/MinimalMap.jsx
+// Add temperature support to the MinimalMap component
 'use client';
 import React, { useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, useMap, GeoJSON } from 'react-leaflet';
@@ -7,23 +7,34 @@ import L from 'leaflet';
 import { useHazardDataContext } from '@/context/HazardDataContext';
 import { useTimeSeriesDataContext } from '@/context/TimeSeriesDataContext';
 import RainfallStatsCard from './RainfallStatsCard';
+import TemperatureStatsCard from './TemperatureStatsCard';
 import RainfallLegend from './RainfallLegend';
+import TemperatureLegend from './TemperatureLegend';
 
-function getColorForIntensity(normalizedIntensity) {
-  if (normalizedIntensity > 0.9) return '#03045e';
-  if (normalizedIntensity > 0.7) return '#0077b6';
-  if (normalizedIntensity > 0.5) return '#00b4d8';
-  if (normalizedIntensity > 0.3) return '#90e0ef';
-  if (normalizedIntensity > 0.1) return '#caf0f8';
-  return '#e6f2ff';
+function getColorForIntensity(normalizedIntensity, hazardType) {
+  if (hazardType === 'temperature') {
+    if (normalizedIntensity > 0.9) return '#9A031E'; // Dark red
+    if (normalizedIntensity > 0.7) return '#E36414'; // Orange-red
+    if (normalizedIntensity > 0.5) return '#FB8B24'; // Orange
+    if (normalizedIntensity > 0.3) return '#FFD166'; // Yellow
+    if (normalizedIntensity > 0.1) return '#06D6A0'; // Teal
+    return '#118AB2'; // Blue
+  } else { // rainfall
+    if (normalizedIntensity > 0.9) return '#03045e';
+    if (normalizedIntensity > 0.7) return '#0077b6';
+    if (normalizedIntensity > 0.5) return '#00b4d8';
+    if (normalizedIntensity > 0.3) return '#90e0ef';
+    if (normalizedIntensity > 0.1) return '#caf0f8';
+    return '#e6f2ff';
+  }
 }
 
-function GridLayer({ rainfallData, cellSize = 0.4 }) {
+function GridLayer({ hazardData, cellSize = 0.4, hazardType = 'rainfall' }) {
   const map = useMap();
   const [renderedCells, setRenderedCells] = useState([]);
 
   useEffect(() => {
-    if (!map || !rainfallData) return;
+    if (!map || !hazardData) return;
 
     // Clear existing layers
     map.eachLayer(layer => {
@@ -40,7 +51,7 @@ function GridLayer({ rainfallData, cellSize = 0.4 }) {
     const southWest = bounds.getSouthWest();
     const northEast = bounds.getNorthEast();
 
-    const allIntensities = rainfallData.map(item => item[2]);
+    const allIntensities = hazardData.map(item => item[2]);
     const maxIntensity = Math.max(...allIntensities);
 
     const newRenderedCells = [];
@@ -52,7 +63,7 @@ function GridLayer({ rainfallData, cellSize = 0.4 }) {
           [lat + cellSize, lng + cellSize],
         ];
 
-        const pointsInCell = rainfallData.filter(point =>
+        const pointsInCell = hazardData.filter(point =>
           point[0] >= lat && point[0] < lat + cellSize &&
           point[1] >= lng && point[1] < lng + cellSize
         );
@@ -61,7 +72,7 @@ function GridLayer({ rainfallData, cellSize = 0.4 }) {
           const totalIntensity = pointsInCell.reduce((sum, point) => sum + point[2], 0);
           const averageIntensity = totalIntensity / pointsInCell.length;
           const normalizedIntensity = maxIntensity > 0 ? averageIntensity / maxIntensity : 0;
-          const color = getColorForIntensity(normalizedIntensity);
+          const color = getColorForIntensity(normalizedIntensity, hazardType);
 
           const rect = L.rectangle(cellBounds, {
             fillColor: color,
@@ -84,17 +95,18 @@ function GridLayer({ rainfallData, cellSize = 0.4 }) {
         }
       });
     };
-  }, [map, rainfallData, cellSize]);
+  }, [map, hazardData, cellSize, hazardType]);
 
   return null;
 }
 
 const MinimalMap = () => {
   const {
-    hazardData: rainfallData,
+    hazardData,
     loading: hazardLoading,
     error: hazardError,
     regions: regionalData,
+    selectedHazardType,
   } = useHazardDataContext();
   const { 
     loading: timeseriesLoading, 
@@ -118,7 +130,7 @@ const MinimalMap = () => {
     </div>;
   }
 
-   return (
+  return (
     <div className="h-[700px] w-full relative">
       <MapContainer
         center={[9.0, 38.7]}
@@ -135,16 +147,23 @@ const MinimalMap = () => {
         {regionalData && (
           <GeoJSON data={regionalData} style={regionStyle} />
         )}
-        {rainfallData && Array.isArray(rainfallData) && rainfallData.length > 0 && (
+        {hazardData && Array.isArray(hazardData) && hazardData.length > 0 && (
           <GridLayer
-            rainfallData={rainfallData}
+            hazardData={hazardData}
             cellSize={0.4}
+            hazardType={selectedHazardType}
           />
         )}
-        {rainfallData && Array.isArray(rainfallData) && rainfallData.length > 0 && <RainfallLegend />}
+        {selectedHazardType === 'rainfall' && hazardData && Array.isArray(hazardData) && hazardData.length > 0 && (
+          <RainfallLegend />
+        )}
+        {selectedHazardType === 'temperature' && hazardData && Array.isArray(hazardData) && hazardData.length > 0 && (
+          <TemperatureLegend />
+        )}
       </MapContainer>
 
-      <RainfallStatsCard/>
+      {selectedHazardType === 'rainfall' && <RainfallStatsCard/>}
+      {selectedHazardType === 'temperature' && <TemperatureStatsCard/>}
     </div>
   );
 };

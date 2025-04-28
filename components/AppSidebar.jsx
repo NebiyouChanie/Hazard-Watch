@@ -27,16 +27,19 @@ const mainItems = [{ title: "Dashboard", url: "/", icon: Map }]
  
 
 export function AppSidebar() {
-    const { loadRegions } = useHazardDataContext();
+    const { loadRegions ,setSelectedHazardType } = useHazardDataContext();
     const { updateCurrentPeriod, currentPeriod } = useTimeSeriesDataContext();  
+     console.log("🚀 ~ AppSidebar ~ currentPeriod:", currentPeriod)
      const router = useRouter();
-    
-    const [activeHazard, setActiveHazard] = useState(null);
+     
+     const [activeHazard, setActiveHazard] = useState(null);
+     console.log("🚀 ~ handleHazardClick ~ hazardSlug:", activeHazard)
  
     const handleHazardClick = async (hazardSlug, periodValue) => {
         setActiveHazard(hazardSlug);
+        setSelectedHazardType(hazardSlug)
         updateCurrentPeriod(periodValue);  
-        
+         
          if (loadRegions) {
             await loadRegions();
         }

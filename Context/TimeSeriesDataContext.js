@@ -59,8 +59,9 @@ export const TimeSeriesDataProvider = ({ children }) => {
     }
   }, [availablePeriods]);
 
-  const fetchTimeSeries = useCallback(async (aggregation = 'daily', region = null, date = null, period = 'daily') => {
-    const cacheKey = `${aggregation}-${region}-${date}-${period}`;
+// Modify the fetchTimeSeries function to handle temperature data
+const fetchTimeSeries = useCallback(async (aggregation = 'daily', region = null, date = null, period = 'daily', hazardType = 'rainfall') => {
+    const cacheKey = `${hazardType}-${aggregation}-${region}-${date}-${period}`;
     if (lastFetched[cacheKey]) return;
     
     setLoading(true);
@@ -70,21 +71,43 @@ export const TimeSeriesDataProvider = ({ children }) => {
     
     try {
       let data;
-      switch (aggregation) {
-        case 'daily_by_day':
-          data = await fetchHazardData.getDailyTimeSeriesByDay(date);
+      switch (hazardType) {
+        case 'temperature':
+          switch (aggregation) {
+            case 'daily_by_day':
+              data = await fetchHazardData.getDailyTemperatureTimeSeriesByDay(date);
+              break;
+            case 'monthly':
+              data = await fetchHazardData.getMonthlyTemperatureTimeSeries(date);
+              break;
+            case 'annual':
+              data = await fetchHazardData.getAnnualTemperatureTimeSeries(date);
+              break;
+            case 'seasonal':
+              data = await fetchHazardData.getSeasonalTemperatureTimeSeries(date);
+              break;
+            default:
+              data = await fetchHazardData.getTemperatureTimeSeries(aggregation);
+          }
           break;
-        case 'monthly':
-          data = await fetchHazardData.getMonthlyTimeSeries(date);
-          break;
-        case 'annual':
-          data = await fetchHazardData.getAnnualTimeSeries(date);
-          break;
-        case 'seasonal':
-          data = await fetchHazardData.getSeasonalTimeSeries(date);
-          break;
+        case 'rainfall':
         default:
-          data = await fetchHazardData.getTimeSeries(aggregation);
+          switch (aggregation) {
+            case 'daily_by_day':
+              data = await fetchHazardData.getDailyTimeSeriesByDay(date);
+              break;
+            case 'monthly':
+              data = await fetchHazardData.getMonthlyTimeSeries(date);
+              break;
+            case 'annual':
+              data = await fetchHazardData.getAnnualTimeSeries(date);
+              break;
+            case 'seasonal':
+              data = await fetchHazardData.getSeasonalTimeSeries(date);
+              break;
+            default:
+              data = await fetchHazardData.getTimeSeries(aggregation);
+          }
       }
       setTimeSeriesData(data);
     } catch (err) {
