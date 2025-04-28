@@ -1,6 +1,5 @@
-// components/AppSidebar.jsx
 'use client'
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // Add useEffect import
 import {
     CloudRain, Thermometer, Droplets, Map,
     Settings, AlertTriangle, BarChart2, Layers
@@ -21,30 +20,68 @@ import {
 } from "@/components/ui/sidebar"
 import { hazardConfig } from '@/config/hazardConfig';
 import Link from 'next/link';
+import { fetchHazardData } from '@/lib/api'; // Add this import
 
 const mainItems = [{ title: "Dashboard", url: "/", icon: Map }]
 
- 
-
 export function AppSidebar() {
-    const { loadRegions ,setSelectedHazardType } = useHazardDataContext();
+    const { 
+        loadRegions,
+        setSelectedHazardType,
+        availableDates,
+        setAvailableDates 
+    } = useHazardDataContext();
     const { updateCurrentPeriod, currentPeriod } = useTimeSeriesDataContext();  
-     console.log("🚀 ~ AppSidebar ~ currentPeriod:", currentPeriod)
-     const router = useRouter();
-     
-     const [activeHazard, setActiveHazard] = useState(null);
-     console.log("🚀 ~ handleHazardClick ~ hazardSlug:", activeHazard)
- 
+    const [activeHazard, setActiveHazard] = useState(null);
+  
+    // Function to fetch available dates for a hazard type
+    const fetchAvailableDates = async (hazardType) => {
+        try {
+            let datesData;
+            if (hazardType === 'temperature') {
+                datesData = await fetchHazardData.getTemperatureAvailableDates();
+            } else {
+                datesData = await fetchHazardData.getAvailableDates();
+            }
+             
+            // Store the exact API response structure
+            setAvailableDates(prev => ({
+                ...prev, // Maintain existing data
+                [hazardType]: {
+                    dates: datesData.dates || [],
+                    months: datesData.months || [],
+                    years: datesData.years || []
+                }
+            }));
+        } catch (error) {
+            console.error(`Failed to load available dates for ${hazardType}:`, error);
+            setAvailableDates(prev => ({
+                ...prev,
+                [hazardType]: {
+                    dates: [],
+                    months: [],
+                    years: []
+                }
+            }));
+        }
+    };
+
     const handleHazardClick = async (hazardSlug, periodValue) => {
         setActiveHazard(hazardSlug);
-        setSelectedHazardType(hazardSlug)
+        setSelectedHazardType(hazardSlug);
         updateCurrentPeriod(periodValue);  
-         
-         if (loadRegions) {
+        
+        // Fetch available dates when hazard is selected
+        if (!availableDates[hazardSlug]) {
+            await fetchAvailableDates(hazardSlug);
+        }
+        
+        if (loadRegions) {
             await loadRegions();
         }
     };
 
+   
     return (
         <div className="relative flex z-[1000]">
             <Sidebar className="w-64 border-r bg-gradient-to-b from-blue-50/20 to-white">

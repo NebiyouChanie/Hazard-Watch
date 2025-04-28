@@ -17,25 +17,23 @@ const RainfallStatsCard = () => {
     timeSeriesData: stats,
     fetchTimeSeries, 
     currentPeriod, 
-    availableDates,
     loading: timeseriesLoading,
   } = useTimeSeriesDataContext();
   
-  const { loadHazardData } = useHazardDataContext();
-  
+  const { loadHazardData,availableDates } = useHazardDataContext();
+    
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedMonthYear, setSelectedMonthYear] = useState(null);
   const [selectedYear, setSelectedYear] = useState(null);
   const [selectedSeason, setSelectedSeason] = useState('MAM');
   const [isLoading, setIsLoading] = useState(false);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
-
+  const availableRainfallDates = availableDates.rainfall
   // Get min and max dates for each period type
   const getDateBounds = () => {
-    if (!availableDates) return { min: null, max: null };
-    
-    if (currentPeriod === 'daily' && availableDates.dates?.length) {
-      const sortedDates = availableDates.dates
+    if (!availableRainfallDates) return { min: null, max: null };
+     if (currentPeriod === 'daily' && availableRainfallDates.daily?.length) {
+      const sortedDates = availableRainfallDates.daily
         .map(dateStr => parseISO(dateStr))
         .filter(date => isValid(date))
         .sort((a, b) => a - b);
@@ -46,10 +44,10 @@ const RainfallStatsCard = () => {
       };
     }
     
-    if (currentPeriod === 'monthly' && availableDates.dates?.length) {
+    if (currentPeriod === 'monthly' && availableRainfallDates.daily?.length) {
         // Get all unique year-month combinations from available dates
         const yearMonths = [...new Set(
-          availableDates.dates.map(dateStr => dateStr.slice(0, 7)) // Extract YYYY-MM
+          availableRainfallDates.daily.map(dateStr => dateStr.slice(0, 7)) // Extract YYYY-MM
         )].sort();
         
         const minDate = yearMonths[0] ? new Date(`${yearMonths[0]}-01`) : null;
@@ -63,9 +61,9 @@ const RainfallStatsCard = () => {
         };
       }
     
-      if (currentPeriod === 'annual' && availableDates.years?.length) {
+      if (currentPeriod === 'annual' && availableRainfallDates.annual?.length) {
         // Sort years numerically (as strings)
-        const sortedYears = [...availableDates.years].sort();
+        const sortedYears = [...availableRainfallDates.annual].sort();
         
         return {
           min: new Date(sortedYears[0], 0, 1),   
@@ -73,11 +71,11 @@ const RainfallStatsCard = () => {
         };
       }
 
-      if (currentPeriod === 'seasonal' && availableDates.dates?.length) {
+      if (currentPeriod === 'seasonal' && availableRainfallDates.daily?.length) {
         // Get all unique year-season combinations from available dates
         const seasonMap = {};
         
-        availableDates.dates.forEach(dateStr => {
+        availableRainfallDates.daily.forEach(dateStr => {
           const date = parseISO(dateStr);
           if (!isValid(date)) return;
           
@@ -116,7 +114,7 @@ const RainfallStatsCard = () => {
   };
 
   const { min: minDate, max: maxDate } = getDateBounds();
-
+  
   // Safe date parsing function
   const safeParseISO = (dateString) => {
     try {
@@ -129,7 +127,7 @@ const RainfallStatsCard = () => {
 
   // Initialize with the last available date
   useEffect(() => {
-    if (!initialLoadDone && availableDates && minDate && maxDate) {
+    if (!initialLoadDone && availableRainfallDates && minDate && maxDate) {
       setInitialLoadDone(true);
       
       if (currentPeriod === 'daily') {
@@ -164,7 +162,7 @@ const RainfallStatsCard = () => {
         loadInitialData(seasonDate, 'seasonal');
       }
     }
-  }, [availableDates, currentPeriod, initialLoadDone, minDate, maxDate]);
+  }, [availableRainfallDates, currentPeriod, initialLoadDone, minDate, maxDate]);
 
   const loadInitialData = async (date, periodType) => {
     setIsLoading(true);
@@ -291,8 +289,8 @@ useEffect(() => {
   if (currentPeriod === 'daily') {
     const selectedDay = Object.keys(stats)[0];
     const rainfallValues = Array.isArray(stats[selectedDay]) ? stats[selectedDay] : [stats[selectedDay]];
-    cardTitle = `Rainfall on ${selectedDay}`;
-    cardDescription = "Rainfall readings across available years.";
+    cardTitle = `Daily Rainfall Analysis`;
+    cardDescription = `Rainfall readings on ${selectedDay} across available years.`;
     chartData = rainfallValues.map((value, index) => ({
       year: 2005 + index,
       value: Number(value),
@@ -301,6 +299,7 @@ useEffect(() => {
     dateControls = (
       <div className="w-full">
     <DatePicker
+        selected={selectedDate}
         onChange={handleDateChange}
         minDate={minDate}
         maxDate={maxDate}
@@ -321,7 +320,7 @@ useEffect(() => {
       ? new Date(0, parseInt(selectedMonthNumber) - 1).toLocaleString('default', { month: 'long' })
       : '';
     const monthData = stats[selectedMonthNumber];
-    cardTitle = `Rainfall in ${selectedMonthName}`;
+    cardTitle = `Monthly Rainfall Analysis`;
     cardDescription = `Rainfall for ${selectedMonthName} across available years.`;
     chartData = (Array.isArray(monthData) ? monthData : [monthData]).map((value, index) => ({
       year: 2015 + index,
@@ -347,7 +346,7 @@ useEffect(() => {
     );
   } 
   else if (currentPeriod === 'annual') {
-    cardTitle = "Annual Rainfall";
+    cardTitle = "Annual Rainfall Anaylsis";
     cardDescription = "Total annual rainfall for available years.";
     chartData = Object.entries(stats).map(([year, value]) => ({
       year: Number(year),
@@ -418,9 +417,12 @@ useEffect(() => {
     <Card className="absolute bottom-4 left-4 z-2000 w-96 border border-gray-200 bg-white shadow-md rounded-lg">
       <CardHeader>
         <CardTitle className="text-lg text-blue-600 font-semibold">{cardTitle}</CardTitle>
-        {cardDescription && <p className="text-sm text-gray-500">{cardDescription}</p>}
+        {dateControls}
+
       </CardHeader>
       <CardContent className="h-64">
+      <CardTitle className="text-md text-gray-600 font-semibold">Time Series </CardTitle>
+      {cardDescription && <p className="text-sm text-gray-500">{cardDescription}</p>}
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -431,9 +433,8 @@ useEffect(() => {
           </LineChart>
         </ResponsiveContainer>
       </CardContent>
-      <CardFooter className="p-4">
-        {dateControls}
-      </CardFooter>
+      <CardFooter className="p-4 flex flex-col justify-start">
+       </CardFooter>
     </Card>
   );
 };

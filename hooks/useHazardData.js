@@ -106,9 +106,9 @@ export function useHazardData() {
     }
   }, [regions]);
 
-// Update the loadHazardData function in useHazardData hook
-const loadHazardData = useCallback(async (date, period, hazardType) => {
-    const cacheKey = `${hazardType}-${period}-${date}`;
+  // Update the loadHazardData function in useHazardData hook
+  const loadHazardData = useCallback(async (date, period, hazardType) => {
+     const cacheKey = `${hazardType}-${period}-${date}`;
     if (lastFetched[cacheKey]) return;
     
     setLoading(true);
@@ -117,20 +117,20 @@ const loadHazardData = useCallback(async (date, period, hazardType) => {
       let formattedDate = null;
       if (date) {
         formattedDate = formatDate(date, period);
-      }
-  
+    }
+   
       let response;
       switch (hazardType) {
         case 'rainfall':
           response = await fetchHazardData.getRainfall(formattedDate, period);
           break;
-        case 'temperature':
-          response = await fetchHazardData.getTemperature(formattedDate, period);
-          break;
-        default:
-          throw new Error(`Unsupported hazard type: ${hazardType}`);
-      }
-      setStats(response?.stats || null);
+          case 'temperature':
+              response = await fetchHazardData.getTemperature(formattedDate, period);
+              break;
+              default:
+                  throw new Error(`Unsupported hazard type: ${hazardType}`);
+                }
+       setStats(response?.stats || null);
       const heatmapData = response?.data ? convertGridToLatLng(response) : null;
       setHazardData(heatmapData);
       setSelectedHazardType(hazardType);
@@ -141,38 +141,56 @@ const loadHazardData = useCallback(async (date, period, hazardType) => {
       setLoading(false);
     }
   }, [formatDate, convertGridToLatLng, lastFetched]);
+
+const loadAvailablePeriods = useCallback(async (hazardType) => {
+  if (availablePeriods[hazardType]) return;
   
-
-  const loadAvailablePeriods = useCallback(async (hazardType) => {
-    if (availablePeriods[hazardType]) return;
-    
-    try {
-      const periodsData = await fetchHazardData.getAvailablePeriods(hazardType);
-      setAvailablePeriods(prev => ({ ...prev, [hazardType]: periodsData.periods }));
-    } catch (error) {
-      console.error(`Failed to load available periods for ${hazardType}:`, error);
-      setAvailablePeriods(prev => ({ ...prev, [hazardType]: [] }));
+  try {
+    let periodsData;
+    if (hazardType === 'temperature') {
+      periodsData = await fetchHazardData.getTemperatureAvailablePeriods();
+    } else {
+      // Default to rainfall if not specified or for other hazard types
+      periodsData = await fetchHazardData.getAvailablePeriods();
     }
-  }, [availablePeriods]);
+    setAvailablePeriods(prev => ({ ...prev, [hazardType]: periodsData.periods }));
+  } catch (error) {
+    console.error(`Failed to load available periods for ${hazardType}:`, error);
+    setAvailablePeriods(prev => ({ ...prev, [hazardType]: [] }));
+  }
+}, [availablePeriods]);
 
-  const loadAvailableDates = useCallback(async (hazardType) => {
-    if (availableDates[hazardType]) return;
-    
-    try {
-      const datesData = await fetchHazardData.getAvailableDates(hazardType);
-      setAvailableDates(prev => ({
-        ...prev,
-        [hazardType]: {
-          daily: datesData.dates || [],
-          monthly: datesData.months || [],
-          annual: datesData.years || [],
-        },
-      }));
-    } catch (error) {
-      console.error(`Failed to load available dates for ${hazardType}:`, error);
-      setAvailableDates(prev => ({ ...prev, [hazardType]: { daily: [], monthly: [], annual: [] } }));
+const loadAvailableDates = useCallback(async (hazardType) => {
+  if (availableDates[hazardType]) return;
+  
+  try {
+    let datesData;
+    if (hazardType === 'temperature') {
+      datesData = await fetchHazardData.getTemperatureAvailableDates();
+    } else {
+      // Default to rainfall if not specified or for other hazard types
+      datesData = await fetchHazardData.getAvailableDates();
     }
-  }, [availableDates]);
+    setAvailableDates(prev => ({
+      ...prev,
+      [hazardType]: {
+        daily: datesData.dates || [],
+        monthly: datesData.months || [],
+        annual: datesData.years || [],
+      },
+    }));
+  } catch (error) {
+    console.error(`Failed to load available dates for ${hazardType}:`, error);
+    setAvailableDates(prev => ({ 
+      ...prev, 
+      [hazardType]: { 
+        daily: [], 
+        monthly: [], 
+        annual: [] 
+      } 
+    }));
+  }
+}, [availableDates]);
 
   useEffect(() => {
     if (selectedHazardType) {
@@ -194,6 +212,7 @@ const loadHazardData = useCallback(async (date, period, hazardType) => {
     mapBounds,
     selectedHazardType,
     setSelectedHazardType,
+    setAvailableDates,
     availablePeriods,
     availableDates,
     loadRegions,

@@ -75,7 +75,7 @@ const fetchTimeSeries = useCallback(async (aggregation = 'daily', region = null,
         case 'temperature':
           switch (aggregation) {
             case 'daily_by_day':
-              data = await fetchHazardData.getDailyTemperatureTimeSeriesByDay(date);
+               data = await fetchHazardData.getDailyTemperatureTimeSeriesByDay(date);
               break;
             case 'monthly':
               data = await fetchHazardData.getMonthlyTemperatureTimeSeries(date);
@@ -117,6 +117,7 @@ const fetchTimeSeries = useCallback(async (aggregation = 'daily', region = null,
       setLoading(false);
     }
   }, [lastFetched]);
+            
 
   useEffect(() => {
     fetchAvailableDates();

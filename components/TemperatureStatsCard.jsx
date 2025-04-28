@@ -16,11 +16,10 @@ const TemperatureStatsCard = () => {
     timeSeriesData: stats,
     fetchTimeSeries, 
     currentPeriod, 
-    availableDates,
-    loading: timeseriesLoading,
+     loading: timeseriesLoading,
   } = useTimeSeriesDataContext();
   
-  const { loadHazardData } = useHazardDataContext();
+  const { loadHazardData,availableDates } = useHazardDataContext();
   
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedMonthYear, setSelectedMonthYear] = useState(null);
@@ -28,13 +27,15 @@ const TemperatureStatsCard = () => {
   const [selectedSeason, setSelectedSeason] = useState('MAM');
   const [isLoading, setIsLoading] = useState(false);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
-
+  const availableTempratureDates = availableDates.temperature
+  console.log("🚀 ~ TemperatureStatsCard ~ availableTempratureDates:", availableTempratureDates)
+ 
   // Get min and max dates for each period type
   const getDateBounds = () => {
-    if (!availableDates) return { min: null, max: null };
+    if (!availableTempratureDates) return { min: null, max: null };
     
-    if (currentPeriod === 'daily' && availableDates.dates?.length) {
-      const sortedDates = availableDates.dates
+    if (currentPeriod === 'daily' && availableTempratureDates.daily?.length) {
+      const sortedDates = availableTempratureDates.daily
         .map(dateStr => parseISO(dateStr))
         .filter(date => isValid(date))
         .sort((a, b) => a - b);
@@ -45,24 +46,31 @@ const TemperatureStatsCard = () => {
       };
     }
     
-    if (currentPeriod === 'monthly' && availableDates.dates?.length) {
-      const yearMonths = [...new Set(
-        availableDates.dates.map(dateStr => dateStr.slice(0, 7)))
-      ].sort();
+    if (currentPeriod === 'monthly' && availableTempratureDates.daily?.length) {
+        // First normalize all dates to YYYY-MM-DD format
+        const normalizedDates = availableTempratureDates.daily.map(dateStr => {
+          const [year, month, day] = dateStr.split('-');
+          return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        });
       
-      const minDate = yearMonths[0] ? new Date(`${yearMonths[0]}-01`) : null;
-      const maxDate = yearMonths[yearMonths.length - 1] 
-        ? new Date(`${yearMonths[yearMonths.length - 1]}-01`) 
-        : null;
+        // Extract unique year-month combinations
+        const yearMonths = [...new Set(
+          normalizedDates.map(dateStr => dateStr.slice(0, 7)) // Get YYYY-MM
+        )].sort();
+        
+        const minDate = yearMonths[0] ? new Date(`${yearMonths[0]}-01`) : null;
+        const maxDate = yearMonths[yearMonths.length - 1] 
+          ? new Date(`${yearMonths[yearMonths.length - 1]}-01`) 
+          : null;
+      
+        return {
+          min: minDate,
+          max: maxDate
+        };
+      }
     
-      return {
-        min: minDate,
-        max: maxDate
-      };
-    }
-    
-    if (currentPeriod === 'annual' && availableDates.years?.length) {
-      const sortedYears = [...availableDates.years].sort();
+     if (currentPeriod === 'annual' && availableTempratureDates.annual?.length) {
+      const sortedYears = [...availableTempratureDates.annual].sort();
       
       return {
         min: new Date(sortedYears[0], 0, 1),   
@@ -70,10 +78,10 @@ const TemperatureStatsCard = () => {
       };
     }
 
-    if (currentPeriod === 'seasonal' && availableDates.dates?.length) {
+    if (currentPeriod === 'seasonal' && availableTempratureDates.daily?.length) {
       const seasonMap = {};
       
-      availableDates.dates.forEach(dateStr => {
+      availableTempratureDates.daily.forEach(dateStr => {
         const date = parseISO(dateStr);
         if (!isValid(date)) return;
         
@@ -111,10 +119,10 @@ const TemperatureStatsCard = () => {
   };
 
   const { min: minDate, max: maxDate } = getDateBounds();
-
+  
   // Initialize with the last available date
   useEffect(() => {
-    if (!initialLoadDone && availableDates && minDate && maxDate) {
+    if (!initialLoadDone && availableTempratureDates && minDate && maxDate) {
       setInitialLoadDone(true);
       
       if (currentPeriod === 'daily') {
@@ -145,7 +153,7 @@ const TemperatureStatsCard = () => {
         loadInitialData(seasonDate, 'seasonal');
       }
     }
-  }, [availableDates, currentPeriod, initialLoadDone, minDate, maxDate]);
+  }, [availableTempratureDates, currentPeriod, initialLoadDone, minDate, maxDate]);
 
   const loadInitialData = async (date, periodType) => {
     setIsLoading(true);
@@ -268,8 +276,8 @@ const TemperatureStatsCard = () => {
   if (currentPeriod === 'daily') {
     const selectedDay = Object.keys(stats)[0];
     const tempValues = Array.isArray(stats[selectedDay]) ? stats[selectedDay] : [stats[selectedDay]];
-    cardTitle = `Temperature on ${selectedDay}`;
-    cardDescription = "Temperature readings across available years.";
+    cardTitle = `Daily Temperature Analysis`;
+    cardDescription = `Temperature readings on ${selectedDay} across available years.`;
     chartData = tempValues.map((value, index) => ({
       year: 2005 + index,
       value: Number(value),
@@ -299,7 +307,7 @@ const TemperatureStatsCard = () => {
       ? new Date(0, parseInt(selectedMonthNumber) - 1).toLocaleString('default', { month: 'long' })
       : '';
     const monthData = stats[selectedMonthNumber];
-    cardTitle = `Temperature in ${selectedMonthName}`;
+    cardTitle = `Monthly Temperature Analysis`;
     cardDescription = `Temperature for ${selectedMonthName} across available years.`;
     chartData = (Array.isArray(monthData) ? monthData : [monthData]).map((value, index) => ({
       year: 2015 + index,
@@ -325,7 +333,7 @@ const TemperatureStatsCard = () => {
     );
   } 
   else if (currentPeriod === 'annual') {
-    cardTitle = "Annual Temperature";
+    cardTitle = "Annual Temperature Analysis";
     cardDescription = "Average annual temperature for available years.";
     chartData = Object.entries(stats).map(([year, value]) => ({
       year: Number(year),
@@ -350,8 +358,8 @@ const TemperatureStatsCard = () => {
     );
   } 
   else if (currentPeriod === 'seasonal') {
-    cardTitle = "Seasonal Temperature";
-    cardDescription = "Temperature readings for each season across available years.";
+    cardTitle = "Seasonal Temperature Analysis";
+    cardDescription = `Temperature readings for ${selectedSeason} season across available years.`;
     chartData = Object.entries(stats).flatMap(([season, values]) => {
       const seasonValues = Array.isArray(values) ? values : [values];
       return seasonValues.map((value, index) => ({
@@ -393,9 +401,11 @@ const TemperatureStatsCard = () => {
     <Card className="absolute bottom-4 left-4 z-2000 w-96 border border-gray-200 bg-white shadow-md rounded-lg">
       <CardHeader>
         <CardTitle className="text-lg text-blue-600 font-semibold">{cardTitle}</CardTitle>
-        {cardDescription && <p className="text-sm text-gray-500">{cardDescription}</p>}
+        {dateControls}
       </CardHeader>
       <CardContent className="h-64">
+        <CardTitle className="text-md text-gray-600 font-semibold">Time Series </CardTitle>
+        {cardDescription && <p className="text-sm text-gray-500">{cardDescription}</p>}
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -407,7 +417,7 @@ const TemperatureStatsCard = () => {
         </ResponsiveContainer>
       </CardContent>
       <CardFooter className="p-4">
-        {dateControls}
+       
       </CardFooter>
     </Card>
   );
