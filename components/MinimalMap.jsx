@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, useMap, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { useHazardDataContext } from '@/context/HazardDataContext';
+import { useHazardData } from '@/context/HazardDataContext';
 import { useTimeSeriesDataContext } from '@/context/TimeSeriesDataContext';
 import RainfallStatsCard from './RainfallStatsCard';
 import TemperatureStatsCard from './TemperatureStatsCard';
@@ -107,7 +107,7 @@ const MinimalMap = () => {
     error: hazardError,
     regions: regionalData,
     selectedHazardType,
-  } = useHazardDataContext();
+  } = useHazardData();
   const { 
     loading: timeseriesLoading, 
     error: timeseriesError,  

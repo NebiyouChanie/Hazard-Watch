@@ -10,7 +10,7 @@ import { format, parseISO, isValid, isBefore, isAfter } from 'date-fns';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useTimeSeriesDataContext } from '@/context/TimeSeriesDataContext';
-import { useHazardDataContext } from '@/context/HazardDataContext';
+import { useHazardData } from '@/context/HazardDataContext';
 
 const RainfallStatsCard = () => {
   const { 
@@ -20,7 +20,7 @@ const RainfallStatsCard = () => {
     loading: timeseriesLoading,
   } = useTimeSeriesDataContext();
   
-  const { loadHazardData,availableDates } = useHazardDataContext();
+  const { loadHazardData,availableDates } = useHazardData();
     
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedMonthYear, setSelectedMonthYear] = useState(null);

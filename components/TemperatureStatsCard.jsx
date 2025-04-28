@@ -9,7 +9,7 @@ import { format, parseISO, isValid, isBefore, isAfter } from 'date-fns';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useTimeSeriesDataContext } from '@/context/TimeSeriesDataContext';
-import { useHazardDataContext } from '@/context/HazardDataContext';
+import { useHazardData } from '@/context/HazardDataContext';
 
 const TemperatureStatsCard = () => {
   const { 
@@ -19,12 +19,12 @@ const TemperatureStatsCard = () => {
      loading: timeseriesLoading,
   } = useTimeSeriesDataContext();
   
-  const { loadHazardData,availableDates } = useHazardDataContext();
+  const { loadHazardData,availableDates } = useHazardData();
   
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedMonthYear, setSelectedMonthYear] = useState(null);
   const [selectedYear, setSelectedYear] = useState(null);
-  const [selectedSeason, setSelectedSeason] = useState('MAM');
+  const [selectedSeason, setSelectedSeason] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const availableTempratureDates = availableDates.temperature
@@ -372,7 +372,7 @@ const TemperatureStatsCard = () => {
     dateControls = (
       <div className="grid grid-cols-2 gap-2 w-full">
         <select
-          value={selectedSeason}
+        //   value={selectedSeason}
           onChange={(e) => handleSeasonChange(e.target.value)}
           className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         >

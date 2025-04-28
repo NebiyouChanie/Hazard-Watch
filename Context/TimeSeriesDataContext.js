@@ -23,43 +23,14 @@ export const TimeSeriesDataProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [currentPeriod, setCurrentPeriod] = useState(null);
-  const [availableDates, setAvailableDates] = useState(null);
-  const [availablePeriods, setAvailablePeriods] = useState(null);
   const [lastFetched, setLastFetched] = useState({});
 
   const updateCurrentPeriod = useCallback((period) => {
     setCurrentPeriod(period);
   }, []);
 
-  const fetchAvailableDates = useCallback(async () => {
-    if (availableDates) return;
-    
-    try {
-      const dates = await fetchHazardData.getAvailableDates();
-      setAvailableDates(dates);
-      return dates;
-    } catch (err) {
-      console.error('Error fetching available dates:', err);
-      setAvailableDates(null);
-      return null;
-    }
-  }, [availableDates]);
 
-  const fetchAvailablePeriods = useCallback(async () => {
-    if (availablePeriods) return;
-    
-    try {
-      const periods = await fetchHazardData.getAvailablePeriods();
-      setAvailablePeriods(periods);
-      return periods;
-    } catch (err) {
-      console.error('Error fetching available periods:', err);
-      setAvailablePeriods(null);
-      return null;
-    }
-  }, [availablePeriods]);
-
-// Modify the fetchTimeSeries function to handle temperature data
+//  fetchTimeSeries  
 const fetchTimeSeries = useCallback(async (aggregation = 'daily', region = null, date = null, period = 'daily', hazardType = 'rainfall') => {
     const cacheKey = `${hazardType}-${aggregation}-${region}-${date}-${period}`;
     if (lastFetched[cacheKey]) return;
@@ -118,12 +89,6 @@ const fetchTimeSeries = useCallback(async (aggregation = 'daily', region = null,
     }
   }, [lastFetched]);
             
-
-  useEffect(() => {
-    fetchAvailableDates();
-    fetchAvailablePeriods();
-  }, [fetchAvailableDates, fetchAvailablePeriods]);
-
   return (
     <TimeSeriesDataContext.Provider value={{ 
       timeSeriesData, 
@@ -132,10 +97,6 @@ const fetchTimeSeries = useCallback(async (aggregation = 'daily', region = null,
       fetchTimeSeries, 
       currentPeriod, 
       updateCurrentPeriod,
-      availableDates,
-      availablePeriods,
-      fetchAvailableDates,
-      fetchAvailablePeriods
     }}>
       {children}
     </TimeSeriesDataContext.Provider>

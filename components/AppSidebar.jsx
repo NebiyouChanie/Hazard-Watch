@@ -5,7 +5,7 @@ import {
     Settings, AlertTriangle, BarChart2, Layers
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useHazardDataContext } from '@/context/HazardDataContext';
+import { useHazardData } from '@/context/HazardDataContext';
 import { useTimeSeriesDataContext } from '@/context/TimeSeriesDataContext';
 import { useRouter } from 'next/navigation';
 import {
@@ -28,53 +28,16 @@ export function AppSidebar() {
     const { 
         loadRegions,
         setSelectedHazardType,
-        availableDates,
-        setAvailableDates 
-    } = useHazardDataContext();
+     } = useHazardData();
     const { updateCurrentPeriod, currentPeriod } = useTimeSeriesDataContext();  
     const [activeHazard, setActiveHazard] = useState(null);
   
-    // Function to fetch available dates for a hazard type
-    const fetchAvailableDates = async (hazardType) => {
-        try {
-            let datesData;
-            if (hazardType === 'temperature') {
-                datesData = await fetchHazardData.getTemperatureAvailableDates();
-            } else {
-                datesData = await fetchHazardData.getAvailableDates();
-            }
-             
-            // Store the exact API response structure
-            setAvailableDates(prev => ({
-                ...prev, // Maintain existing data
-                [hazardType]: {
-                    dates: datesData.dates || [],
-                    months: datesData.months || [],
-                    years: datesData.years || []
-                }
-            }));
-        } catch (error) {
-            console.error(`Failed to load available dates for ${hazardType}:`, error);
-            setAvailableDates(prev => ({
-                ...prev,
-                [hazardType]: {
-                    dates: [],
-                    months: [],
-                    years: []
-                }
-            }));
-        }
-    };
+    
 
     const handleHazardClick = async (hazardSlug, periodValue) => {
         setActiveHazard(hazardSlug);
         setSelectedHazardType(hazardSlug);
         updateCurrentPeriod(periodValue);  
-        
-        // Fetch available dates when hazard is selected
-        if (!availableDates[hazardSlug]) {
-            await fetchAvailableDates(hazardSlug);
-        }
         
         if (loadRegions) {
             await loadRegions();
