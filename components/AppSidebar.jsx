@@ -29,8 +29,7 @@ const mainItems = [{ title: "Dashboard", url: "/", icon: Map }]
 export function AppSidebar() {
     const { loadRegions } = useHazardDataContext();
     const { updateCurrentPeriod, currentPeriod } = useTimeSeriesDataContext();  
-    console.log("🚀 ~ AppSidebar ~ currentPeriod:", currentPeriod)
-    const router = useRouter();
+     const router = useRouter();
     
     const [activeHazard, setActiveHazard] = useState(null);
  

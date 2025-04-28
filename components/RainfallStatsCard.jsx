@@ -160,7 +160,8 @@ const RainfallStatsCard = () => {
       
         // Update state and load data
         setSelectedSeason(season);
-         loadInitialData(seasonDate, 'seasonal');
+        setSelectedYear(maxDate);
+        loadInitialData(seasonDate, 'seasonal');
       }
     }
   }, [availableDates, currentPeriod, initialLoadDone, minDate, maxDate]);
@@ -192,6 +193,8 @@ const RainfallStatsCard = () => {
     }
   };
 
+
+  
   const handleDateChange = async (date) => {
     if (!date) return;
     setSelectedDate(date);
@@ -234,36 +237,39 @@ const RainfallStatsCard = () => {
     }
   };
 
-  const handleSeasonChange = async (season) => {
-    if (!season || !selectedYear) return;
+  const handleSeasonChange = (season) => {
+    if (!season) return;
     setSelectedSeason(season);
-    setIsLoading(true);
-    try {
-      const seasonKey = `${season}-${selectedYear.getFullYear()}`;
-      await fetchTimeSeries('seasonal', null, seasonKey, 'seasonal');
-      await loadHazardData(seasonKey, 'seasonal', 'rainfall');
-    } catch (error) {
-      console.error('Error loading seasonal data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSeasonYearChange = async (date) => {
-    if (!date || !selectedSeason) return;
+   };
+  
+  const handleSeasonYearChange = (date) => {
+    if (!date) return;
     setSelectedYear(date);
-    setIsLoading(true);
-    try {
-      const seasonKey = `${selectedSeason}-${format(date, 'yyyy')}`;
-      await fetchTimeSeries('seasonal', null, seasonKey, 'seasonal');
-      await loadHazardData(seasonKey, 'seasonal', 'rainfall');
-    } catch (error) {
-      console.error('Error loading seasonal data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+   };
 
+
+useEffect(() => {
+    if (currentPeriod === 'seasonal' && selectedSeason && selectedYear) {
+      const year = selectedYear.getFullYear();
+      const seasonKey = `${selectedSeason}-${year}`;
+
+      const fetchData = async () => {
+        setIsLoading(true);
+        try {
+          await fetchTimeSeries('seasonal', null, selectedSeason, 'seasonal');
+          await loadHazardData(seasonKey, 'seasonal', 'rainfall');
+        } catch (error) {
+          console.error('Error loading seasonal data:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      fetchData();
+    }
+  }, [selectedSeason, selectedYear, currentPeriod, fetchTimeSeries, loadHazardData, setIsLoading]); // Ensure these dependencies are included
+
+  
   if (!stats || Object.keys(stats).length === 0 || timeseriesLoading) {
     return (
       <Card className="absolute bottom-4 left-4 z-2000 w-80 border border-gray-200 bg-white shadow-md rounded-lg p-4">
@@ -378,35 +384,35 @@ const RainfallStatsCard = () => {
     });
 
     dateControls = (
-      <div className="grid grid-cols-2 gap-2 w-full">
-        <Select
-          value={selectedSeason}
-          onValueChange={handleSeasonChange}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select season" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="MAM">MAM (Mar-May)</SelectItem>
-            <SelectItem value="JJAS">JJAS (Jun-Sep)</SelectItem>
-            <SelectItem value="OND">OND (Oct-Dec)</SelectItem>
-          </SelectContent>
-        </Select>
-        <DatePicker
-          selected={selectedYear}
-          onChange={handleSeasonYearChange}
-          minDate={minDate}
-          maxDate={maxDate}
-          placeholderText="Select year"
-          className="w-full p-2 border rounded"
-          dateFormat="yyyy"
-          showYearPicker
-          scrollableYearDropdown
-          yearDropdownItemNumber={10}
-        />
-      </div>
-    );
+        <div className="grid grid-cols-2 gap-2 w-full">
+          {/* Native select with Tailwind styling */}
+          <select
+            value={selectedSeason}
+            onChange={(e) => handleSeasonChange(e.target.value)}
+            className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="MAM">MAM (Mar-May)</option>
+            <option value="JJAS">JJAS (Jun-Sep)</option>
+            <option value="OND">OND (Oct-Dec)</option>
+          </select>
+      
+          {/* Keep your existing DatePicker */}
+          <DatePicker
+            selected={selectedYear}
+            onChange={handleSeasonYearChange}
+            minDate={minDate}
+            maxDate={maxDate}
+            placeholderText="Select year"
+            className="w-full p-2 border rounded"
+            dateFormat="yyyy"
+            showYearPicker
+            scrollableYearDropdown
+            yearDropdownItemNumber={10}
+          />
+        </div>
+      );
   }
+
 
   return (
     <Card className="absolute bottom-4 left-4 z-2000 w-96 border border-gray-200 bg-white shadow-md rounded-lg">
